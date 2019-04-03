@@ -2,6 +2,8 @@ package protocol;
 
 import java.net.MulticastSocket;
 import java.net.InetAddress;
+import java.io.IOException;
+import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 
 public class Backup extends Thread
@@ -44,6 +46,19 @@ public class Backup extends Thread
     {
         while(true)
         {
+            byte[] buf = new byte[1024 * 1024];
+            DatagramPacket receivedPacket = new DatagramPacket(buf, buf.length);
+            
+            try
+            {
+                mdbSocket.receive(receivedPacket);
+
+                //TODO Complete
+            }
+            catch(IOException e)
+            {
+                System.out.println("Couldn't receive packet");
+            }
             
         }
     }

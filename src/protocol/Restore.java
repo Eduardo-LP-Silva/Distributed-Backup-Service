@@ -3,6 +3,8 @@ package protocol;
 import java.net.MulticastSocket;
 import java.net.InetAddress;
 import java.net.DatagramSocket;
+import java.net.DatagramPacket;
+import java.io.IOException;
 
 public class Restore extends Thread
 {
@@ -44,7 +46,19 @@ public class Restore extends Thread
     {
         while(true)
         {
+            byte[] buf = new byte[1024];
+            DatagramPacket receivedPacket = new DatagramPacket(buf, buf.length);
             
+            try
+            {
+                mdrSocket.receive(receivedPacket);
+
+                //TODO Complete
+            }
+            catch(IOException e)
+            {
+                System.out.println("Couldn't receive packet");
+            }
         }
     }
 }

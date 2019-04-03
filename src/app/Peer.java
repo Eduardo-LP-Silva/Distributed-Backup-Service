@@ -7,6 +7,7 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.server.UnicastRemoteObject;
 import java.rmi.registry.Registry;
 import protocol.*;
+import java.io.File;
 
 public class Peer implements BackupService
 {
@@ -15,11 +16,13 @@ public class Peer implements BackupService
     private static DatagramSocket restoreSocket;
     private static int mcPort, mdbPort, mdrPort;
     private static String mcAddr, mdbAddr, mdrAddr;
+    private static String id;
+    private static String accessPoint;
+    private static String version;
+
     public static void main(String args[])
     {
-        
-
-        if(args.length == 0)
+        if(args.length >= 3)
         {
             mcAddr = "224.0.0.1";
             mdbAddr = "224.0.0.1";
@@ -28,26 +31,30 @@ public class Peer implements BackupService
             mcPort = 5001;
             mdbPort = 5002;
             mdrPort = 5003;
+
+            version = args[0];
+            id = args[1];
+            accessPoint = args[2];
         }
         else
-            if(args.length == 6)
-            {
-                mcAddr = args[0];
-                mcPort = Integer.parseInt(args[1]);
+        {
+            System.out.println("Wrong number of arguments");
+            System.out.println("Usage: Peer <ProtocolVersion> <ServerID> <AccessPoint> [<mcAddr> <mcPort> <mdbAddr> <mdbPort> <mdrAddr> <mdrPort>]");
+            return;
+        }
 
-                mdbAddr = args[2];
-                mdbPort = Integer.parseInt(args[3]);
+        if (args.length == 9) 
+        {
+            mcAddr = args[3];
+            mcPort = Integer.parseInt(args[4]);
 
-                mdrAddr = args[4];
-                mdrPort = Integer.parseInt(args[5]);
-            }
-            else
-            {
-                System.out.println("Wrong number of arguments");
-                System.out.println("Usage: Peer [<mcAddr> <mcPort> <mdbAddr> <mdbPort> <mdrAddr> <mdrPort>]");
-                return;
-            }
-        
+            mdbAddr = args[5];
+            mdbPort = Integer.parseInt(args[6]);
+
+            mdrAddr = args[7];
+            mdrPort = Integer.parseInt(args[8]);
+        }
+            
         setUpClientInterface();
 
         try
@@ -79,7 +86,12 @@ public class Peer implements BackupService
         }
     }
 
-    public Peer() {}
+    public void breakDownFile(File file)
+    {
+        long length = file.length();
+        
+
+    }
 
     public static void setUpClientInterface()
     {
@@ -89,7 +101,7 @@ public class Peer implements BackupService
             BackupService stub = (BackupService) UnicastRemoteObject.exportObject(obj, 0);
 
             Registry registry = LocateRegistry.getRegistry();
-            registry.bind("BackupService", stub);
+            registry.bind(accessPoint, stub);
 
             System.out.println("Client-Server Interface Set Up");
         }
@@ -99,9 +111,23 @@ public class Peer implements BackupService
         }
     }
 
-    public void backupFile()
+    public void backupFile(String path, int replication)
     {
-        //TODO Backup file
+        File file = new File(path);
+
+        if(!file.exists())
+        {
+            System.out.println("Couldn't find file to backup: " + path);
+            return;
+        }
+
+        if(replication <= 0)
+        {
+            System.out.println("Invalid replication degree:" + replication);
+            return;
+        }
+
+        //TODO Smt
     }
 
     public void restoreFile()

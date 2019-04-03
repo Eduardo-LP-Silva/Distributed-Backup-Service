@@ -1,0 +1,4 @@
+src/app/*.class
+src/protocol/*.class
+bin/app/*.class
+bin/protocol/*.class

@@ -35,7 +35,15 @@ public class TestClient
                     return;
                 }
 
-                backupFile(args[2], Integer.parseInt(args[3]));
+                try
+                {
+                    peer.backupFile(args[2], Integer.parseInt(args[3]));
+                }
+                catch(RemoteException e)
+                {
+                    System.out.println("Couldn't back up service");
+                }
+                
                 break;
 
             case "RESTOREENH":
@@ -83,34 +91,6 @@ public class TestClient
         {
             System.out.println("Couldn't connect to server");
         }
-    }
-
-    public static void backupFile(String path, int replication)
-    {
-        File file = new File(path);
-
-        if(!file.exists())
-        {
-            System.out.println("Couldn't find file to backup: " + path);
-            return;
-        }
-
-        if(replication <= 0)
-        {
-            System.out.println("Invalid replication degree:" + replication);
-            return;
-        }
-
-        //TODO Smt
-
-        try
-        {
-            peer.backupFile();
-        }
-        catch(RemoteException e)
-        {
-            System.out.println("Couldn't backup file " + path + " with replication " + replication);
-        }   
     }
 
     public static void restoreFile(String path)
