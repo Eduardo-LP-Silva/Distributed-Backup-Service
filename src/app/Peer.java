@@ -3,8 +3,12 @@ package app;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.server.UnicastRemoteObject;
+import java.security.MessageDigest;
 import java.rmi.registry.Registry;
 import protocol.*;
 import java.io.File;
@@ -89,8 +93,36 @@ public class Peer implements BackupService
     public void breakDownFile(File file)
     {
         long length = file.length();
-        
 
+
+    }
+
+    public char[] generateFileId(File file)
+    {
+        try
+        {
+            //Get metadata attributes
+            BasicFileAttributes attributes = Files.readAttributes(file.toPath(), BasicFileAttributes.class);
+            String hashInput = file.getName() + attributes.lastModifiedTime() + attributes.size(); //Create the value to hash
+            MessageDigest digest = MessageDigest.getInstance("SHA-256"); //Create hash instance
+            byte[] hash = digest.digest(hashInput.getBytes(StandardCharsets.UTF_8)); //Hash
+            char[] hexChars = new char[hash.length * 2], hexArray = "0123456789ABCDEF".toCharArray(); //Convert to format
+
+            for(int j = 0; j < hash.length; j++ ) 
+            {
+                int v = hash[j] & 0xFF;
+                hexChars[j * 2] = hexArray[v >>> 4];
+                hexChars[j * 2 + 1] = hexArray[v & 0x0F];
+            }
+
+            return hexChars;
+
+        }
+        catch(Exception e)
+        {
+            System.out.println("Couldn't generate file id");
+            return null;
+        }
     }
 
     public static void setUpClientInterface()
@@ -101,7 +133,7 @@ public class Peer implements BackupService
             BackupService stub = (BackupService) UnicastRemoteObject.exportObject(obj, 0);
 
             Registry registry = LocateRegistry.getRegistry();
-            registry.bind(accessPoint, stub);
+            registry.rebind(accessPoint, stub);
 
             System.out.println("Client-Server Interface Set Up");
         }
@@ -126,6 +158,8 @@ public class Peer implements BackupService
             System.out.println("Invalid replication degree:" + replication);
             return;
         }
+
+        generateFileId(file);
 
         //TODO Smt
     }

@@ -2,3 +2,7 @@ src/app/*.class
 src/protocol/*.class
 bin/app/*.class
 bin/protocol/*.class
+bin/run_peer.bat
+bin/run_client_backup.bat
+bin/make.bat
+bin/README.txt
