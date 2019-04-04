@@ -12,6 +12,9 @@ import java.security.MessageDigest;
 import java.rmi.registry.Registry;
 import protocol.*;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.BufferedInputStream;
+import java.io.FileOutputStream;
 
 public class Peer implements BackupService
 {
@@ -150,6 +153,11 @@ public class Peer implements BackupService
         }
     }
 
+    public void sendPutChunck(String fileId, byte[] chunck)
+    {
+
+    }
+
     public void backupFile(String path, int replication)
     {
         File file = new File(path);
@@ -167,10 +175,29 @@ public class Peer implements BackupService
         }
 
         String fileId = generateFileId(file);
-        long fileSize = file.length();
+        int fileSize = (int) file.length();
+        int partCounter,  nChuncks = (int) Math.ceil((double) fileSize / 64000);
+        int responseWaitingTime = 1; //seconds
 
-
+        if(fileSize % 64000 == 0) 
+            nChuncks += 1;
         
+        byte[] buffer = new byte[64000]; //Maximum chunk size
+
+        try(FileInputStream fis = new FileInputStream(file); BufferedInputStream bis = new BufferedInputStream(fis);)
+        {
+            for(partCounter = 0; partCounter < nChuncks; partCounter++)
+            {
+                bis.read(buffer);
+
+                //Send PUTCHUNCK on multicast then wait <time> for response on mc channel
+            }
+        }
+        catch(Exception e)
+        {
+            System.out.println("Couldn't separate file into chuncks");
+            return;
+        }        
     }
 
     public void restoreFile()
