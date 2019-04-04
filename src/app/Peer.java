@@ -39,6 +39,8 @@ public class Peer implements BackupService
             version = args[0];
             id = args[1];
             accessPoint = args[2];
+
+            createDirectory();
         }
         else
         {
@@ -90,14 +92,19 @@ public class Peer implements BackupService
         }
     }
 
-    public void breakDownFile(File file)
+    public static void createDirectory()
     {
-        long length = file.length();
+        String dirName = "peer_" + id;
+        boolean directoryAlreadyExists = new File(dirName).mkdirs();
 
-
+        if(!directoryAlreadyExists)
+        {
+            new File(dirName + "/backup").mkdir();
+            new File(dirName + "/restored").mkdir();
+        }
     }
 
-    public char[] generateFileId(File file)
+    public String generateFileId(File file)
     {
         try
         {
@@ -115,7 +122,7 @@ public class Peer implements BackupService
                 hexChars[j * 2 + 1] = hexArray[v & 0x0F];
             }
 
-            return hexChars;
+            return new String(hexChars);
 
         }
         catch(Exception e)
@@ -159,9 +166,11 @@ public class Peer implements BackupService
             return;
         }
 
-        generateFileId(file);
+        String fileId = generateFileId(file);
+        long fileSize = file.length();
 
-        //TODO Smt
+
+        
     }
 
     public void restoreFile()
