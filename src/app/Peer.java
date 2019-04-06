@@ -165,7 +165,7 @@ public class Peer implements BackupService
     public boolean sendPutChunck(String fileId, byte[] chunck, int chuckNo, int replication)
     {
         String msg = "PUTCHUNCK " + version + " " + id + " " + fileId + " " + chuckNo + " " + replication
-            + " \r\n" + "\r\n";
+            + " \r\n\r\n";
 
         byte[] header = msg.getBytes();
         byte[] putchunck = new byte[header.length + chunck.length];
@@ -187,17 +187,31 @@ public class Peer implements BackupService
         return true;
     }
 
-    public boolean receivePut(MulticastSocket mcSocket, int replication)
+    public boolean receivePut(int replication)
     {
         byte[] buffer = new byte[64000];
         DatagramPacket receivedPacket = new DatagramPacket(buffer, buffer.length);
         int replicationCounter = 0;
+        MulticastSocket mcSocket;
+
+        try
+        {
+            mcSocket = new MulticastSocket(mcPort);
+
+            mcSocket.joinGroup(InetAddress.getByName(mcAddr));
+            mcSocket.setTimeToLive(1);
+        }
+        catch(IOException e)
+        {
+            System.out.println("Couldn't open multicast socket to receive STORED messages");
+            return false;
+        }
 
         try
         {
             mcSocket.receive(receivedPacket);
 
-            //Process received pessage
+            
         }
         catch(Exception e)
         {
@@ -205,9 +219,12 @@ public class Peer implements BackupService
                 System.out.println("Didn't received required PUT answers to meet replication demands");
             else
                 System.out.println("Couldn't received PUT");
+
+            mcSocket.close();
+            return false;
         }
 
-
+        mcSocket.close();
         return true;
     }
 
@@ -237,19 +254,8 @@ public class Peer implements BackupService
         if(fileSize % 64000 == 0)
             nChuncks += 1;
 
-        try
-        {
-            mcSocket = new MulticastSocket(mcPort);
-
-            mcSocket.joinGroup(InetAddress.getByName(mcAddr));
-            mcSocket.setTimeToLive(1);
-        }
-        catch(IOException e)
-        {
-            System.out.println("Couldn't open multicast socket to receive STORED messages");
-            return;
-        }
-
+        
+        
         try(FileInputStream fis = new FileInputStream(file); BufferedInputStream bis = new BufferedInputStream(fis);)
         {
             int bytesRead = 0;
@@ -285,8 +291,6 @@ public class Peer implements BackupService
         {
             System.out.println("Couldn't separate file into chuncks");
         }
-
-        mcSocket.close();
     }
 
     public void restoreFile(String path)

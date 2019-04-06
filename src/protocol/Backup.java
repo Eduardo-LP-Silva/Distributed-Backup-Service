@@ -12,15 +12,11 @@ import java.io.FileOutputStream;
 public class Backup extends Thread
 {
     private MulticastSocket mdbSocket;
-    private DatagramSocket backupSocket;
 
     private DatagramSocket controlSocket;
 
     private int mcPort;
     private InetAddress mcAddr; 
-
-    private int mdbPort;
-    private InetAddress mdbAddr;
 
     private String id;
     private String version;
@@ -31,8 +27,6 @@ public class Backup extends Thread
     {
         this.mcPort = mcPort;
         this.mcAddr = mcAddr;
-        this.mdbPort = mdbPort;
-        this.mdbAddr = mdbAddr;
         this.id = id;
         this.version = version;
         
@@ -45,7 +39,6 @@ public class Backup extends Thread
             mdbSocket.setTimeToLive(1);
 
             controlSocket = new DatagramSocket();
-            backupSocket = new DatagramSocket();
         }
         catch(Exception e)
         {
@@ -76,11 +69,29 @@ public class Backup extends Thread
 
                 msgParams = msg.split("\\s+");
 
+                if(msgParams.length == 0)
+                {
+                    System.out.println("Corrupt message @ backup");
+                    continue;
+                }
+
                 for(int i = 0; i < msgParams.length; i++)
                     msgParams[i] = msgParams[i].trim();
 
-                if(msgParams[0].equals("PUTCHUNCK"))
-                    putChunck(msgParams, actualData);
+                switch(msgParams[0])
+                {
+                    case "PUTCHUNCK":
+                        putChunck(msgParams, actualData);
+                        break;
+
+                    case "STORED":
+                        updateChunckReplication(msgParams);
+                        break;
+
+                    default:
+                        System.out.println("Couldn't identify message in backup: " + msgParams[0]);
+                }
+                    
                 
             }
             catch(IOException e)
@@ -96,10 +107,17 @@ public class Backup extends Thread
         if(!checkVersion(msgParams[1]))
             return;
 
+        if(msgParams.length < 6)
+        {
+            System.out.println("Invalid PUTCHUNCK message");
+            return;
+        }
+
         if(msgParams[2].equals(id)) //Peer that initiated backup cannot store chuncks
             return;
 
-        String fileId = msgParams[3], chunckNo = msgParams[4], path = id + "/backup/" + fileId;
+        String fileId = msgParams[3], chunckNo = msgParams[4], replication = msgParams[5], 
+            path = id + "/backup/" + fileId;
 
         new File(path).mkdirs();
 
@@ -125,15 +143,54 @@ public class Backup extends Thread
                                 fos.write(body);
                                 fos.close();
                             }
-
-                
             }
+
+            storedChuncksReplication.put(fileId + "-" + chunckNo, new int[] {Integer.parseInt(replication), 1});
+            sendStored(fileId, chunckNo);
         }
         catch(IOException e)
         {
             System.out.println("Couldn't write chunck into file");
             return;
         }    
+    }
+
+    public void sendStored(String fileId, String chunckNo)
+    {
+        String storedMsg = "STORED " + version + " " + id + " " + fileId + " " + chunckNo + " \r\n\r\n";
+        byte[] header = storedMsg.getBytes();
+        DatagramPacket packet = new DatagramPacket(header, header.length, mcAddr, mcPort);
+
+        try
+        {
+            controlSocket.send(packet);
+        }
+        catch(IOException e)
+        {
+            System.out.println("Couldn't send STORED message");
+        }
+    }
+
+    public void updateChunckReplication(String[] msgParams)
+    {
+        if(!checkVersion(msgParams[1]))
+            return;
+
+        if(msgParams.length < 5)
+        {
+            System.out.println("Invalid STORED message");
+            return;
+        }
+
+        String fileId = msgParams[3], chunckNo = msgParams[4], key = fileId + "-" + chunckNo;
+        int[] replications;
+
+        if((replications = storedChuncksReplication.get(key)) != null)
+        {
+            replications[1]++;
+            storedChuncksReplication.put(key, replications);
+        }
+
     }
 
     public boolean checkVersion(String msgVersion)
