@@ -1,8 +1,11 @@
 package app;
 
 import java.net.DatagramSocket;
+import java.net.DatagramPacket;
 import java.net.InetAddress;
+import java.net.MulticastSocket;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -15,6 +18,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.BufferedInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 
 public class Peer implements BackupService
 {
@@ -82,7 +86,7 @@ public class Peer implements BackupService
         try
         {
             Control control = new Control(mcPort, InetAddress.getByName(mcAddr));
-            Backup backup = new Backup(mcPort, InetAddress.getByName(mcAddr), mdbPort, InetAddress.getByName(mdbAddr));
+            Backup backup = new Backup(id, mcPort, InetAddress.getByName(mcAddr), mdbPort, InetAddress.getByName(mdbAddr));
             Restore restore = new Restore(mcPort, InetAddress.getByName(mcAddr), mdrPort, InetAddress.getByName(mdrAddr));
 
             control.run();
@@ -153,9 +157,53 @@ public class Peer implements BackupService
         }
     }
 
-    public void sendPutChunck(String fileId, byte[] chunck)
+    public boolean sendPutChunck(String fileId, byte[] chunck, int chuckNo, int replication)
     {
+        String msg = "PUTCHUNCK " + version + " " + id + " " + fileId + " " + chuckNo + " " + replication
+            + (char) 0xD + (char) 0xA + (char) 0xD + (char) 0xA;
 
+        byte[] header = msg.getBytes();
+        byte[] putchunck = new byte[header.length + chunck.length];
+
+        System.arraycopy(header, 0, putchunck, 0, header.length);
+        System.arraycopy(chunck, 0, putchunck, header.length, chunck.length);
+
+        try
+        {
+            DatagramPacket packet = new DatagramPacket(putchunck, putchunck.length, InetAddress.getByName(mdbAddr), mdbPort);
+
+            backupSocket.send(packet);
+        }
+        catch(Exception e)
+        {
+            System.out.println("Couldn't send putchunck");
+        }
+        
+        return true;
+    }
+
+    public boolean receivePut(MulticastSocket mcSocket, int replication)
+    {
+        byte[] buffer = new byte[64000];
+        DatagramPacket receivedPacket = new DatagramPacket(buffer, buffer.length);
+        int replicationCounter = 0;
+
+        try
+        {
+            mcSocket.receive(receivedPacket);
+
+            //Process received pessage
+        }
+        catch(Exception e)
+        {
+            if(e instanceof SocketTimeoutException)
+                System.out.println("Didn't received required PUT answers to meet replication demands");
+            else
+                System.out.println("Couldn't received PUT");
+        }
+
+
+        return true;
     }
 
     public void backupFile(String path, int replication)
@@ -178,7 +226,22 @@ public class Peer implements BackupService
         int fileSize = (int) file.length();
         int partCounter,  nChuncks = (int) Math.ceil((double) fileSize / 64000);
         int responseWaitingTime = 1; //seconds
+        int attemptNo = 1;
+        MulticastSocket mcSocket;
 
+        try
+        {
+            mcSocket = new MulticastSocket(mcPort);
+
+            mcSocket.joinGroup(InetAddress.getByName(mcAddr));
+            mcSocket.setTimeToLive(1);
+        }
+        catch(IOException e)
+        {
+            System.out.println("Couldn't open multicast socket to receive STORED messages");
+            return;
+        }
+        
         if(fileSize % 64000 == 0) 
             nChuncks += 1;
         
@@ -189,6 +252,16 @@ public class Peer implements BackupService
             for(partCounter = 0; partCounter < nChuncks; partCounter++)
             {
                 bis.read(buffer);
+
+                if(!sendPutChunck(fileId, buffer, partCounter, replication))
+                    return;
+
+                while(attemptNo <= 5)
+                {
+                    mcSocket.setSoTimeout(responseWaitingTime * 1000);
+                    receivePut(mcSocket, replication);
+                }
+
 
                 //Send PUTCHUNCK on multicast then wait <time> for response on mc channel
             }

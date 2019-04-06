@@ -19,12 +19,15 @@ public class Backup extends Thread
     private int mdbPort;
     private InetAddress mdbAddr;
 
-    public Backup(int mcPort, InetAddress mcAddr, int mdbPort, InetAddress mdbAddr)
+    private String id;
+
+    public Backup(String id, int mcPort, InetAddress mcAddr, int mdbPort, InetAddress mdbAddr)
     {
         this.mcPort = mcPort;
         this.mcAddr = mcAddr;
         this.mdbPort = mdbPort;
         this.mdbAddr = mdbAddr;
+        this.id = id;
 
         try
         {
