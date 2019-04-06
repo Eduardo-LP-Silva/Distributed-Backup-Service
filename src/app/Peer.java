@@ -17,7 +17,6 @@ import protocol.*;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.BufferedInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 
 public class Peer implements BackupService
@@ -84,11 +83,10 @@ public class Peer implements BackupService
             return;
         }
 
-
         try
         {
             Control control = new Control(mcPort, InetAddress.getByName(mcAddr));
-            Backup backup = new Backup(id, mcPort, InetAddress.getByName(mcAddr), mdbPort, InetAddress.getByName(mdbAddr));
+            Backup backup = new Backup(id, version, mcPort, InetAddress.getByName(mcAddr), mdbPort, InetAddress.getByName(mdbAddr));
             Restore restore = new Restore(mcPort, InetAddress.getByName(mcAddr), mdrPort, InetAddress.getByName(mdrAddr));
             Delete delete = new Delete(mcPort, InetAddress.getByName(mcAddr), mdbPort, InetAddress.getByName(mdbAddr));
 
@@ -106,7 +104,7 @@ public class Peer implements BackupService
 
     public static void createDirectory()
     {
-        String dirName = "peer_" + id;
+        String dirName = id;
         boolean directoryAlreadyExists = new File(dirName).mkdirs();
 
         if(!directoryAlreadyExists)
@@ -165,7 +163,7 @@ public class Peer implements BackupService
     public boolean sendPutChunck(String fileId, byte[] chunck, int chuckNo, int replication)
     {
         String msg = "PUTCHUNCK " + version + " " + id + " " + fileId + " " + chuckNo + " " + replication
-            + (char) 0xD + (char) 0xA + (char) 0xD + (char) 0xA;
+            + " \r\n" + "\r\n";
 
         byte[] header = msg.getBytes();
         byte[] putchunck = new byte[header.length + chunck.length];
@@ -250,13 +248,22 @@ public class Peer implements BackupService
             return;
         }
         
-        byte[] buffer = new byte[64000]; //Maximum chunk size
-
         try(FileInputStream fis = new FileInputStream(file); BufferedInputStream bis = new BufferedInputStream(fis);)
         {
+            int bytesRead = 0;
+
             for(partCounter = 0; partCounter < nChuncks; partCounter++)
             {
-                bis.read(buffer);
+                int aux = (int) file.length() - bytesRead, bufferSize;
+
+                if (aux > 64000)
+                    bufferSize = 64000; //Maximum chunck size
+                else
+                    bufferSize = aux;
+                  
+                byte[] buffer = new byte[bufferSize];
+
+                bytesRead = bis.read(buffer);
 
                 if(!sendPutChunck(fileId, buffer, partCounter, replication))
                     return;
@@ -275,8 +282,9 @@ public class Peer implements BackupService
         catch(Exception e)
         {
             System.out.println("Couldn't separate file into chuncks");
-            return;
         }
+
+        mcSocket.close();
     }
 
     public void restoreFile(String path)
