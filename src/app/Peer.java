@@ -104,14 +104,8 @@ public class Peer implements BackupService
 
     public static void createDirectory()
     {
-        String dirName = id;
-        boolean directoryAlreadyExists = new File(dirName).mkdirs();
-
-        if(!directoryAlreadyExists)
-        {
-            new File(dirName + "/backup").mkdir();
-            new File(dirName + "/restored").mkdir();
-        }
+        new File(id + "/backup").mkdirs();
+        new File(id + "/restored").mkdirs();
     }
 
     public String generateFileId(File file)
@@ -185,9 +179,9 @@ public class Peer implements BackupService
         return true;
     }
 
-    public boolean receivePut(int replication)
+    public boolean receivePut(int timeout, int replication, String fileId, int chunckNo)
     {
-        byte[] buffer = new byte[64000];
+        byte[] buffer = new byte[64100];
         DatagramPacket receivedPacket = new DatagramPacket(buffer, buffer.length);
         int replicationCounter = 0;
         MulticastSocket mcSocket;
@@ -198,6 +192,7 @@ public class Peer implements BackupService
 
             mcSocket.joinGroup(InetAddress.getByName(mcAddr));
             mcSocket.setTimeToLive(1);
+            mcSocket.setSoTimeout(timeout);
         }
         catch(IOException e)
         {
@@ -207,9 +202,43 @@ public class Peer implements BackupService
 
         try
         {
-            mcSocket.receive(receivedPacket);
+            while(replicationCounter < replication)
+            {
+                mcSocket.receive(receivedPacket);
 
-            
+                byte[] actualData = new byte[receivedPacket.getLength()];
+
+                System.arraycopy(receivedPacket.getData(), 0, actualData, 0, actualData.length);
+
+                String msg = new String(actualData).trim();
+                String[] msgParams = msg.split("\\s+");
+
+                if(msgParams.length == 0)
+                {
+                    System.out.println("Corrupt message @ peer.receivePut");
+                    continue;
+                }
+
+                for(int i = 0; i < msgParams.length; i++)
+                    msgParams[i] = msgParams[i].trim();
+
+                if(msgParams[0].equals("STORED"))
+                {
+                    if(msgParams.length < 5)
+                    {
+                        System.out.println("Invalid STORED message");
+                        continue;
+                    }
+
+                    String version = msgParams[1], fileIdReceived = msgParams[3], chunckNoReceived = msgParams[4];
+
+                    if(!version.equals(Peer.version) || !fileIdReceived.equals(fileId) 
+                        || Integer.parseInt(chunckNoReceived) != chunckNo)
+                        continue;
+                    else
+                        replicationCounter++;
+                }
+            }
         }
         catch(Exception e)
         {
@@ -245,15 +274,12 @@ public class Peer implements BackupService
         String fileId = generateFileId(file);
         int fileSize = (int) file.length();
         int partCounter,  nChuncks = (int) Math.ceil((double) fileSize / 64000);
-        int responseWaitingTime = 1; //seconds
+        int responseWaitingTime = 1 * 1000;
         int attemptNo = 1;
-        MulticastSocket mcSocket;
 
         if(fileSize % 64000 == 0) 
             nChuncks += 1;
 
-        
-        
         try(FileInputStream fis = new FileInputStream(file); BufferedInputStream bis = new BufferedInputStream(fis);)
         {
             int bytesRead = 0;
@@ -274,15 +300,19 @@ public class Peer implements BackupService
                 if(!sendPutChunck(fileId, buffer, partCounter, replication))
                     return;
 
-                /*
                 while(attemptNo <= 5)
                 {
-                    mcSocket.setSoTimeout(responseWaitingTime * 1000);
-                    receivePut(mcSocket, replication);
-                } */
-
-
-                //Send PUTCHUNCK on multicast then wait <time> for response on mc channel
+                    if(receivePut(responseWaitingTime, replication, fileId, partCounter))
+                        break;
+                    else
+                    {
+                        responseWaitingTime *= 2;
+                        attemptNo++;
+                    }
+                }
+                
+                if(attemptNo > 5)
+                    System.out.println("Max attempts to send PUTCHUNCK reached\nChunck not stored with required replication");
             }
         }
         catch(Exception e)
@@ -311,8 +341,6 @@ public class Peer implements BackupService
           System.out.println("Couldn't find file to delete: " + path);
           return;
       }
-
-
     }
 
     public void manageStorage()

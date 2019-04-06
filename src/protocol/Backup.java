@@ -8,6 +8,8 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 public class Backup extends Thread
 {
@@ -160,7 +162,18 @@ public class Backup extends Thread
         String storedMsg = "STORED " + version + " " + id + " " + fileId + " " + chunckNo + " \r\n\r\n";
         byte[] header = storedMsg.getBytes();
         DatagramPacket packet = new DatagramPacket(header, header.length, mcAddr, mcPort);
+        Random rand = new Random();
+        int waitingTime = rand.nextInt(400);
 
+        try
+        {
+            TimeUnit.MILLISECONDS.sleep(waitingTime);
+        }
+        catch(InterruptedException e)
+        {
+            System.out.println("Couldn't sleep before sending STORED response");
+        }
+        
         try
         {
             controlSocket.send(packet);
