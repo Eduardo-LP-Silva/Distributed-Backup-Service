@@ -33,6 +33,7 @@ public class Peer implements BackupService
 
     public static void main(String args[])
     {
+        System.setProperty("java.net.preferIPv4Stack", "true");
         if(args.length >= 3)
         {
             mcAddr = "224.0.0.1";
@@ -88,11 +89,12 @@ public class Peer implements BackupService
             Control control = new Control(mcPort, InetAddress.getByName(mcAddr));
             Backup backup = new Backup(id, version, mcPort, InetAddress.getByName(mcAddr), mdbPort, InetAddress.getByName(mdbAddr));
             Restore restore = new Restore(mcPort, InetAddress.getByName(mcAddr), mdrPort, InetAddress.getByName(mdrAddr));
-            Delete delete = new Delete(mcPort, InetAddress.getByName(mcAddr), mdbPort, InetAddress.getByName(mdbAddr));
+            Delete delete = new Delete(id, mcPort, InetAddress.getByName(mcAddr), mdbPort, InetAddress.getByName(mdbAddr));
 
             control.start();
             backup.start();
             restore.start();
+            delete.start();
 
             System.out.println("Started threads");
         }
@@ -175,7 +177,7 @@ public class Peer implements BackupService
         {
             System.out.println("Couldn't send putchunck");
         }
-        
+
         return true;
     }
 
@@ -277,7 +279,7 @@ public class Peer implements BackupService
         int responseWaitingTime = 1 * 1000;
         int attemptNo = 1;
 
-        if(fileSize % 64000 == 0) 
+        if(fileSize % 64000 == 0)
             nChuncks += 1;
 
         try(FileInputStream fis = new FileInputStream(file); BufferedInputStream bis = new BufferedInputStream(fis);)
@@ -292,7 +294,7 @@ public class Peer implements BackupService
                     bufferSize = 64000; //Maximum chunck size
                 else
                     bufferSize = aux;
-                  
+
                 byte[] buffer = new byte[bufferSize];
 
                 bytesRead = bis.read(buffer);
@@ -341,6 +343,72 @@ public class Peer implements BackupService
           System.out.println("Couldn't find file to delete: " + path);
           return;
       }
+      else{
+        System.out.println("File Deleted");
+      }
+
+      String fileId = generateFileId(file);
+      int fileSize = (int) file.length();
+      int partCounter,  nChuncks = (int) Math.ceil((double) fileSize / 64000);
+      int responseWaitingTime = 1; //seconds
+      int attemptNo = 1;
+      MulticastSocket mcSocket;
+
+      if(fileSize % 64000 == 0)
+          nChuncks += 1;
+
+      try
+      {
+          mcSocket = new MulticastSocket(mcPort);
+
+          mcSocket.joinGroup(InetAddress.getByName(mcAddr));
+          mcSocket.setTimeToLive(1);
+      }
+      catch(IOException e)
+      {
+          System.out.println("Couldn't open multicast socket to receive STORED messages");
+          return;
+      }
+
+      try(FileInputStream fis = new FileInputStream(file); BufferedInputStream bis = new BufferedInputStream(fis);)
+      {
+          int bytesRead = 0;
+
+          for(partCounter = 0; partCounter < nChuncks; partCounter++)
+          {
+              int aux = (int) file.length() - bytesRead, bufferSize;
+
+              if (aux > 64000)
+                  bufferSize = 64000; //Maximum chunck size
+              else
+                  bufferSize = aux;
+
+              byte[] buffer = new byte[bufferSize];
+
+              bytesRead = bis.read(buffer);
+
+              int replication = -1;
+
+              if(!sendPutChunck(fileId, buffer, partCounter, replication))
+                  return;
+
+              /*
+              while(attemptNo <= 5)
+              {
+                  mcSocket.setSoTimeout(responseWaitingTime * 1000);
+                  receivePut(mcSocket, replication);
+              } */
+
+
+              //Send PUTCHUNCK on multicast then wait <time> for response on mc channel
+          }
+      }
+      catch(Exception e)
+      {
+          System.out.println("Couldn't separate file into chuncks");
+      }
+
+      mcSocket.close();
     }
 
     public void manageStorage()
