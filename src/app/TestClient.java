@@ -19,7 +19,7 @@ public class TestClient
 
         connectToBackupService(args[0]);
 
-        switch (args[1]) 
+        switch (args[1])
         {
             case "BACKUPENH":
 
@@ -28,7 +28,7 @@ public class TestClient
 
             case "BACKUP":
 
-                if (args.length < 4) 
+                if (args.length < 4)
                 {
                     System.out.println("Wrong number of arguments\n");
                     System.out.println("Usage: TestClient <peer_ap> <operation> <opnd_1> <opnd_2>");
@@ -43,7 +43,7 @@ public class TestClient
                 {
                     System.out.println("Couldn't back up service");
                 }
-                
+
                 break;
 
             case "RESTOREENH":
@@ -107,12 +107,12 @@ public class TestClient
 
         try
         {
-            peer.restoreFile();
+            peer.restoreFile(path);
         }
         catch(RemoteException e)
         {
             System.out.println("Couldn't restore file " + path);
-        }   
+        }
     }
 
     public static void deleteFile(String path)
@@ -129,12 +129,12 @@ public class TestClient
 
         try
         {
-            peer.deleteFile();
+            peer.deleteFile(path);
         }
         catch(RemoteException e)
         {
             System.out.println("Couldn't delete file " + path);
-        }   
+        }
     }
 
     public static void manageStorage(int maxStorage)
@@ -154,7 +154,7 @@ public class TestClient
         catch(RemoteException e)
         {
             System.out.println("Couldn't change local storage to value" + maxStorage);
-        }   
+        }
     }
 
     public static void getInfo()
@@ -168,6 +168,6 @@ public class TestClient
         catch(RemoteException e)
         {
             System.out.println("Couldn't get system info");
-        } 
+        }
     }
 }
