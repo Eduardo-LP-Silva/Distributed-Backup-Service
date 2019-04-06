@@ -25,6 +25,7 @@ public class Peer implements BackupService
     private static DatagramSocket controlSocket;
     private static DatagramSocket backupSocket;
     private static DatagramSocket restoreSocket;
+    private static DatagramSocket deleteSocket;
     private static int mcPort, mdbPort, mdrPort;
     private static String mcAddr, mdbAddr, mdrAddr;
     private static String id;
@@ -38,7 +39,7 @@ public class Peer implements BackupService
             mcAddr = "224.0.0.1";
             mdbAddr = "224.0.0.1";
             mdrAddr = "224.0.0.1";
-            
+
             mcPort = 5001;
             mdbPort = 5002;
             mdrPort = 5003;
@@ -56,7 +57,7 @@ public class Peer implements BackupService
             return;
         }
 
-        if (args.length == 9) 
+        if (args.length == 9)
         {
             mcAddr = args[3];
             mcPort = Integer.parseInt(args[4]);
@@ -67,7 +68,7 @@ public class Peer implements BackupService
             mdrAddr = args[7];
             mdrPort = Integer.parseInt(args[8]);
         }
-            
+
         setUpClientInterface();
 
         try
@@ -75,19 +76,21 @@ public class Peer implements BackupService
             controlSocket = new DatagramSocket();
             backupSocket = new DatagramSocket();
             restoreSocket = new DatagramSocket();
+            deleteSocket = new DatagramSocket();
         }
         catch(SocketException e)
         {
             System.out.println("Couldn't open communication sockets in peer.");
             return;
         }
-        
-        
+
+
         try
         {
             Control control = new Control(mcPort, InetAddress.getByName(mcAddr));
             Backup backup = new Backup(id, mcPort, InetAddress.getByName(mcAddr), mdbPort, InetAddress.getByName(mdbAddr));
             Restore restore = new Restore(mcPort, InetAddress.getByName(mcAddr), mdrPort, InetAddress.getByName(mdrAddr));
+            Delete delete = new Delete(mcPort, InetAddress.getByName(mcAddr), mdbPort, InetAddress.getByName(mdbAddr));
 
             control.start();
             backup.start();
@@ -124,7 +127,7 @@ public class Peer implements BackupService
             byte[] hash = digest.digest(hashInput.getBytes(StandardCharsets.UTF_8)); //Hash
             char[] hexChars = new char[hash.length * 2], hexArray = "0123456789ABCDEF".toCharArray(); //Convert to format
 
-            for(int j = 0; j < hash.length; j++ ) 
+            for(int j = 0; j < hash.length; j++ )
             {
                 int v = hash[j] & 0xFF;
                 hexChars[j * 2] = hexArray[v >>> 4];
@@ -273,17 +276,31 @@ public class Peer implements BackupService
         {
             System.out.println("Couldn't separate file into chuncks");
             return;
-        }        
+        }
     }
 
-    public void restoreFile()
+    public void restoreFile(String path)
     {
-        //TODO Restore file
+      File file = new File(path);
+
+      if(!file.exists())
+      {
+          System.out.println("Couldn't find file to restore: " + path);
+          return;
+      }
     }
 
-    public void deleteFile()
+    public void deleteFile(String path)
     {
-        //TODO Delete file
+      File file = new File(path);
+
+      if(!file.exists())
+      {
+          System.out.println("Couldn't find file to delete: " + path);
+          return;
+      }
+
+
     }
 
     public void manageStorage()
