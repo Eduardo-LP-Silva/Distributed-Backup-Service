@@ -89,9 +89,11 @@ public class Peer implements BackupService
             Backup backup = new Backup(id, mcPort, InetAddress.getByName(mcAddr), mdbPort, InetAddress.getByName(mdbAddr));
             Restore restore = new Restore(mcPort, InetAddress.getByName(mcAddr), mdrPort, InetAddress.getByName(mdrAddr));
 
-            control.run();
-            backup.run();
-            restore.run();
+            control.start();
+            backup.start();
+            restore.start();
+
+            System.out.println("Started threads");
         }
         catch(Exception e)
         {
@@ -229,6 +231,9 @@ public class Peer implements BackupService
         int attemptNo = 1;
         MulticastSocket mcSocket;
 
+        if(fileSize % 64000 == 0) 
+            nChuncks += 1;
+
         try
         {
             mcSocket = new MulticastSocket(mcPort);
@@ -242,9 +247,6 @@ public class Peer implements BackupService
             return;
         }
         
-        if(fileSize % 64000 == 0) 
-            nChuncks += 1;
-        
         byte[] buffer = new byte[64000]; //Maximum chunk size
 
         try(FileInputStream fis = new FileInputStream(file); BufferedInputStream bis = new BufferedInputStream(fis);)
@@ -256,11 +258,12 @@ public class Peer implements BackupService
                 if(!sendPutChunck(fileId, buffer, partCounter, replication))
                     return;
 
+                /*
                 while(attemptNo <= 5)
                 {
                     mcSocket.setSoTimeout(responseWaitingTime * 1000);
                     receivePut(mcSocket, replication);
-                }
+                } */
 
 
                 //Send PUTCHUNCK on multicast then wait <time> for response on mc channel

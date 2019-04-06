@@ -47,6 +47,8 @@ public class Backup extends Thread
     @Override
     public void run()
     {
+        String msg;
+
         while(true)
         {
             byte[] buf = new byte[1024 * 1024];
@@ -56,7 +58,10 @@ public class Backup extends Thread
             {
                 mdbSocket.receive(receivedPacket);
 
-                //TODO Complete
+                msg = new String(receivedPacket.getData()).trim();
+
+                System.out.println(msg);
+                
             }
             catch(IOException e)
             {
