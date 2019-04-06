@@ -181,7 +181,7 @@ public class Peer implements BackupService
         return true;
     }
 
-    public boolean receivePut(int timeout, int replication, String fileId, int chunckNo)
+    public boolean receiveStored(int timeout, int replication, String fileId, int chunckNo)
     {
         byte[] buffer = new byte[64100];
         DatagramPacket receivedPacket = new DatagramPacket(buffer, buffer.length);
@@ -304,7 +304,7 @@ public class Peer implements BackupService
 
                 while(attemptNo <= 5)
                 {
-                    if(receivePut(responseWaitingTime, replication, fileId, partCounter))
+                    if(receiveStored(responseWaitingTime, replication, fileId, partCounter))
                         break;
                     else
                     {
