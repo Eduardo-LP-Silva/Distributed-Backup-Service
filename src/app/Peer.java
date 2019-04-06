@@ -249,7 +249,7 @@ public class Peer implements BackupService
             System.out.println("Couldn't open multicast socket to receive STORED messages");
             return;
         }
-        
+
         try(FileInputStream fis = new FileInputStream(file); BufferedInputStream bis = new BufferedInputStream(fis);)
         {
             int bytesRead = 0;
@@ -262,7 +262,7 @@ public class Peer implements BackupService
                     bufferSize = 64000; //Maximum chunck size
                 else
                     bufferSize = aux;
-                  
+
                 byte[] buffer = new byte[bufferSize];
 
                 bytesRead = bis.read(buffer);
@@ -336,13 +336,23 @@ public class Peer implements BackupService
           return;
       }
 
-      byte[] buffer = new byte[64000]; //Maximum chunk size
-
       try(FileInputStream fis = new FileInputStream(file); BufferedInputStream bis = new BufferedInputStream(fis);)
       {
+          int bytesRead = 0;
+
           for(partCounter = 0; partCounter < nChuncks; partCounter++)
           {
-              bis.read(buffer);
+              int aux = (int) file.length() - bytesRead, bufferSize;
+
+              if (aux > 64000)
+                  bufferSize = 64000; //Maximum chunck size
+              else
+                  bufferSize = aux;
+
+              byte[] buffer = new byte[bufferSize];
+
+              bytesRead = bis.read(buffer);
+
               int replication = -1;
 
               if(!sendPutChunck(fileId, buffer, partCounter, replication))
@@ -362,9 +372,9 @@ public class Peer implements BackupService
       catch(Exception e)
       {
           System.out.println("Couldn't separate file into chuncks");
-          return;
       }
 
+      mcSocket.close();
     }
 
     public void manageStorage()

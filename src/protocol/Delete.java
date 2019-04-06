@@ -57,13 +57,13 @@ public class Delete extends Thread
 
           String path = "testFile.txt";
 
-          File file = new File("peer_" + id + "/" + path);
-          System.out.println("Deleted file: " + "peer_" + id + "/" + path);
+          File file = new File(id + "/" + path);
+          System.out.println("Deleted file: " + id + "/" + path);
 
           if(file.exists())
           {
             file.delete();
-            System.out.println("Deleted file: " + "peer_" + id + "/" + path);
+            System.out.println("Deleted file: " + id + "/" + path);
           }
 
           try
@@ -80,13 +80,13 @@ public class Delete extends Thread
               System.out.println(chunkId);
               System.out.println(chunkNo);
 
-              String chunkPath = "peer_" + id + "/backup/" + chunkId;
+              String chunkPath = id + "/backup/" + chunkId;
               File chunkFile = new File(chunkPath + "/chk" + chunkNo);
 
               if(chunkFile.exists())
               {
                 chunkFile.delete();
-                System.out.println("Deleted chunkFile: " + "peer_" + chunkPath + "/chk" + chunkNo);
+                System.out.println("Deleted chunkFile: " + chunkPath + "/chk" + chunkNo);
               }
 
           }
