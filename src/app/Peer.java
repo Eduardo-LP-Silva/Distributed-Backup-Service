@@ -18,6 +18,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.BufferedInputStream;
 import java.io.IOException;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 
 public class Peer implements BackupService
 {
@@ -343,8 +345,16 @@ public class Peer implements BackupService
           System.out.println("Couldn't find file to delete: " + path);
           return;
       }
-      else{
-        System.out.println("File Deleted");
+
+      try {
+          FileWriter writer = new FileWriter("utils/fileNames.txt");
+          BufferedWriter bufferedWriter = new BufferedWriter(writer);
+
+          bufferedWriter.write(path);
+          bufferedWriter.close();
+          System.out.println("Wrote in file: " + path);
+      } catch (IOException e) {
+          e.printStackTrace();
       }
 
       String fileId = generateFileId(file);

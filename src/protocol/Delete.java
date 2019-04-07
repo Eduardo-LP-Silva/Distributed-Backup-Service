@@ -6,6 +6,11 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.io.File;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 
 public class Delete extends Thread
 {
@@ -55,19 +60,20 @@ public class Delete extends Thread
           byte[] buf = new byte[1024 * 1024];
           DatagramPacket receivedPacket = new DatagramPacket(buf, buf.length);
 
-          String path = "testFile.txt";
-
-          File file = new File(id + "/" + path);
-          System.out.println("Deleted file: " + id + "/" + path);
-
-          if(file.exists())
-          {
-            file.delete();
-            System.out.println("Deleted file: " + id + "/" + path);
-          }
-
           try
           {
+              String path = getFilePath();
+              if (path != null){
+                File file = new File(id + "/" + path);
+                System.out.println("Deleted file: " + id + "/" + path);
+
+                if(file.exists())
+                {
+                  file.delete();
+                  System.out.println("Deleted file: " + id + "/" + path);
+                }
+              }
+
               mdbSocket.receive(receivedPacket);
 
               msg = new String(receivedPacket.getData()).trim();
@@ -97,5 +103,23 @@ public class Delete extends Thread
 
       }
 
+    }
+
+    public String getFilePath(){
+      try {
+          FileReader reader = new FileReader("utils/fileNames.txt");
+          BufferedReader bufferedReader = new BufferedReader(reader);
+
+          String line;
+
+          if ((line = bufferedReader.readLine()) != null) {
+            reader.close();
+            return line;
+          }
+
+      } catch (IOException e) {
+          e.printStackTrace();
+      }
+      return null;
     }
 }
