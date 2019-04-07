@@ -299,7 +299,7 @@ public class Peer implements BackupService
 
                 byte[] buffer = new byte[bufferSize];
 
-                bytesRead = bis.read(buffer);
+                bytesRead += bis.read(buffer);
 
                 if(!sendPutChunck(fileId, buffer, partCounter, replication))
                     return;

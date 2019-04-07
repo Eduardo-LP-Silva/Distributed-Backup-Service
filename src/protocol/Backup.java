@@ -129,22 +129,20 @@ public class Backup extends Thread
         {
             if(chunckFile.createNewFile()) //If chunck doesn't exist already
             {
-                for(int i = 0; i < bytes.length - 1; i++)
-                    if(bytes[i] == 13 && bytes[i + 1] == 10) //CRLF's
-                        for(int j = i + 2; j < bytes.length - 1; j++)
-                            if(bytes[j] == 13 && bytes[j + 1] == 10)
-                            {
-                                j += 2;
+                for(int i = 0; i < bytes.length - 4; i++)
+                    if(bytes[i] == 13 && bytes[i + 1] == 10 && bytes[i + 2] == 13 && bytes[i + 3] == 10) //CRLF's
+                    {
+                        i += 4;
 
-                                byte[] body = new byte[bytes.length - j];
+                        byte[] body = new byte[bytes.length - i];
 
-                                System.arraycopy(bytes, j, body, 0, body.length);
-                                
-                                FileOutputStream fos = new FileOutputStream(chunckFile);
-                                
-                                fos.write(body);
-                                fos.close();
-                            }
+                        System.arraycopy(bytes, i, body, 0, body.length);
+
+                        FileOutputStream fos = new FileOutputStream(chunckFile);
+
+                        fos.write(body);
+                        fos.close();
+                    }
             }
 
             storedChuncksReplication.put(fileId + "-" + chunckNo, new int[] {Integer.parseInt(replication), 1});
