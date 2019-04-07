@@ -1,1 +1,1 @@
-java app.TestClient bs1 BACKUP testFile.txt 2
+java app.TestClient bs1 BACKUP biggerFile.png 2
