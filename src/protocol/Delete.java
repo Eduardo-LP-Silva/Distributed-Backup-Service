@@ -25,9 +25,9 @@ public class Delete extends Thread
     private int mdbPort;
     private InetAddress mdbAddr;
 
-    String id;
+    private int id;
 
-    public Delete(String id, int mcPort, InetAddress mcAddr, int mdbPort, InetAddress mdbAddr)
+    public Delete(int id, int mcPort, InetAddress mcAddr, int mdbPort, InetAddress mdbAddr)
     {
         this.mcPort = mcPort;
         this.mcAddr = mcAddr;

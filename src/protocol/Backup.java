@@ -20,10 +20,10 @@ public class Backup extends ProtocolThread
     private int mcPort;
     private InetAddress mcAddr; 
 
-    private String id;
+    private int id;
     private String version;
 
-    public Backup(String id, String version, int mcPort, InetAddress mcAddr, int mdbPort, InetAddress mdbAddr)
+    public Backup(int id, String version, int mcPort, InetAddress mcAddr, int mdbPort, InetAddress mdbAddr)
     {
         this.mcPort = mcPort;
         this.mcAddr = mcAddr;
@@ -83,7 +83,7 @@ public class Backup extends ProtocolThread
                         break;
 
                     case "STORED":
-                        updateChunckReplication(msgParams);
+                        handleStored(msgParams);
                         break;
 
                     default:
@@ -111,7 +111,7 @@ public class Backup extends ProtocolThread
             return;
         }
 
-        if(msgParams[2].equals(id)) //Peer that initiated backup cannot store chuncks
+        if(msgParams[2].equals("" + id)) //Peer that initiated backup cannot store chuncks
             return;
 
         String fileId = msgParams[3], chunckNo = msgParams[4], replication = msgParams[5], 
@@ -138,12 +138,17 @@ public class Backup extends ProtocolThread
 
                         fos.write(body);
                         fos.close();
+
+                        backedUpChuncks.put(fileId + "-" + chunckNo, new int[] {Integer.parseInt(replication), 1, 
+                            bytes.length - i});
+
+                        sendStored(fileId, chunckNo);
+                        saveTableToDisk();
                     }
             }
-
-            backedUpChuncks.put(fileId + "-" + chunckNo, new int[] {Integer.parseInt(replication), 1});
-            sendStored(fileId, chunckNo);
-            saveTableToDisk();
+            else
+                if(backedUpChuncks.get(fileId + "-" + chunckNo) != null)
+                    sendStored(fileId, chunckNo);
         }
         catch(IOException e)
         {
@@ -179,7 +184,7 @@ public class Backup extends ProtocolThread
         }
     }
 
-    public void updateChunckReplication(String[] msgParams)
+    public void handleStored(String[] msgParams)
     {
         if(!checkVersion(msgParams[1]))
             return;

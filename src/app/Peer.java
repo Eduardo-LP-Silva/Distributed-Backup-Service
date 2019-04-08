@@ -32,7 +32,7 @@ public class Peer implements BackupService
     private static DatagramSocket deleteSocket;
     private static int mcPort, mdbPort, mdrPort;
     private static String mcAddr, mdbAddr, mdrAddr;
-    private static String id;
+    private static int id;
     private static String accessPoint;
     private static String version;
 
@@ -50,7 +50,7 @@ public class Peer implements BackupService
             mdrPort = 5003;
 
             version = args[0];
-            id = args[1];
+            id = Integer.parseInt(args[1]);
             accessPoint = args[2];
 
             createDirectory();
@@ -75,7 +75,6 @@ public class Peer implements BackupService
         }
 
         generateDataBase();
-
         setUpClientInterface();
 
         try

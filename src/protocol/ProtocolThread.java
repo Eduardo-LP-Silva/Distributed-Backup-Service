@@ -8,7 +8,7 @@ import java.util.Set;
 
 public abstract class ProtocolThread extends Thread
 {
-    protected static Hashtable<String, int[]> backedUpChuncks; //fileID-ChunckNo -> {replication_expected, actual_replication}
+    protected static Hashtable<String, int[]> backedUpChuncks; //fileID-ChunckNo -> {replication_expected, actual_replication, size}
     
     public static void setRecordsTable(Hashtable<String, int[]> newTable)
     {
@@ -40,7 +40,17 @@ public abstract class ProtocolThread extends Thread
         {
             int[] values = backedUpChuncks.get(key);
 
-            System.out.println(key + "-> [" + values[0] + "," + values[1] + "]");
+            System.out.print(key + "-> [");
+            
+            for(int i = 0; i < values.length; i++)
+            {
+                System.out.print(values[i]);
+
+                if(i != values.length - 1)
+                    System.out.print(", ");
+            }
+
+            System.out.println("]");
         }
             
     }
