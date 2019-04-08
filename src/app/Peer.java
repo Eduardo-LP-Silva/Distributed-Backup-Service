@@ -27,7 +27,7 @@ import java.io.ObjectOutputStream;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.util.ArrayList;
-import java.util.Hashtable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.Set;
 
 public class Peer extends Thread implements BackupService 
@@ -41,8 +41,8 @@ public class Peer extends Thread implements BackupService
     protected static int id;
     protected static String accessPoint;
     protected static String version;
-    protected static Hashtable<String, int[]> backedUpChuncks; //fileID-ChunckNo -> {replication_expected, size}
-    protected static Hashtable<String, ArrayList<Integer>> chuncksStorage; //fileID-ChunckNo -> {1, 2, ...}
+    protected static ConcurrentHashMap<String, int[]> backedUpChuncks; //fileID-ChunckNo -> {replication_expected, size}
+    protected static ConcurrentHashMap<String, ArrayList<Integer>> chuncksStorage; //fileID-ChunckNo -> {1, 2, ...}
 
     public static void main(String args[])
     {
@@ -126,7 +126,7 @@ public class Peer extends Thread implements BackupService
             mdbListener.start();
             control.start();
             restore.start();
-            //delete.start();
+            delete.start();
 
             System.out.println("Started threads");
         }
@@ -233,7 +233,7 @@ public class Peer extends Thread implements BackupService
             {
                 ObjectInputStream ois = new ObjectInputStream(fis);
 
-                Peer.setBackupUpChuncksTable((Hashtable<String, int[]>) ois.readObject());
+                Peer.setBackupUpChuncksTable((ConcurrentHashMap<String, int[]>) ois.readObject());
 
                 ois.close();
                 fis.close();
@@ -251,7 +251,7 @@ public class Peer extends Thread implements BackupService
         {
             System.out.println("Couldn't find previous stored chuncks database file, generating new one...");
 
-            Peer.setBackupUpChuncksTable(new Hashtable<String, int[]>());
+            Peer.setBackupUpChuncksTable(new ConcurrentHashMap<String, int[]>());
             Peer.saveTableToDisk(1);
         }
 
@@ -263,7 +263,7 @@ public class Peer extends Thread implements BackupService
             {
                 ObjectInputStream ois = new ObjectInputStream(fis);
 
-                Peer.setChuncksStorageTable((Hashtable<String, ArrayList<Integer>>) ois.readObject());
+                Peer.setChuncksStorageTable((ConcurrentHashMap<String, ArrayList<Integer>>) ois.readObject());
 
                 ois.close();
                 fis.close();
@@ -281,7 +281,7 @@ public class Peer extends Thread implements BackupService
         {
             System.out.println("Couldn't find previous chuncks storage database file, generating new one...");
 
-            Peer.setChuncksStorageTable(new Hashtable<String, ArrayList<Integer>>());
+            Peer.setChuncksStorageTable(new ConcurrentHashMap<String, ArrayList<Integer>>());
             Peer.saveTableToDisk(2);
         }
         
@@ -517,22 +517,22 @@ public class Peer extends Thread implements BackupService
         Peer.id = id;
     }
 
-    public static void setBackupUpChuncksTable(Hashtable<String, int[]> newTable)
+    public static void setBackupUpChuncksTable(ConcurrentHashMap<String, int[]> newTable)
     {
         backedUpChuncks = newTable;
     }
 
-    public static void setChuncksStorageTable(Hashtable<String, ArrayList<Integer>> newTable)
+    public static void setChuncksStorageTable(ConcurrentHashMap<String, ArrayList<Integer>> newTable)
     {
         chuncksStorage = newTable;
     }
 
-    public static Hashtable<String, int[]> getLocalChuncksTable()
+    public static ConcurrentHashMap<String, int[]> getLocalChuncksTable()
     {
         return backedUpChuncks;
     }
 
-    public static Hashtable<String, ArrayList<Integer>> getChuncksStorageTable()
+    public static ConcurrentHashMap<String, ArrayList<Integer>> getChuncksStorageTable()
     {
         return chuncksStorage;
     }
