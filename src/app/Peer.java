@@ -16,10 +16,13 @@ import java.rmi.registry.Registry;
 import protocol.*;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.BufferedInputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
+import java.util.Hashtable;
 
 public class Peer implements BackupService
 {
@@ -29,7 +32,7 @@ public class Peer implements BackupService
     private static DatagramSocket deleteSocket;
     private static int mcPort, mdbPort, mdrPort;
     private static String mcAddr, mdbAddr, mdrAddr;
-    private static String id;
+    private static int id;
     private static String accessPoint;
     private static String version;
 
@@ -47,7 +50,7 @@ public class Peer implements BackupService
             mdrPort = 5003;
 
             version = args[0];
-            id = args[1];
+            id = Integer.parseInt(args[1]);
             accessPoint = args[2];
 
             createDirectory();
@@ -71,6 +74,7 @@ public class Peer implements BackupService
             mdrPort = Integer.parseInt(args[8]);
         }
 
+        generateDataBase();
         setUpClientInterface();
 
         try
@@ -110,6 +114,43 @@ public class Peer implements BackupService
     {
         new File(id + "/backup").mkdirs();
         new File(id + "/restored").mkdirs();
+    }
+
+    @SuppressWarnings("unchecked")
+    public static void generateDataBase()
+    {
+        FileInputStream fis;
+
+        try
+        {
+            fis = new FileInputStream("backedChuncks.ser");
+        }
+        catch(FileNotFoundException e)
+        {
+            System.out.println("Couldn't find previous database file, generating new one...");
+
+            ProtocolThread.setRecordsTable(new Hashtable<String, int[]>());
+            ProtocolThread.saveTableToDisk();
+            return;
+        }
+
+        try
+        {
+            ObjectInputStream ois = new ObjectInputStream(fis);
+
+            ProtocolThread.setRecordsTable((Hashtable<String, int[]>) ois.readObject());
+
+            ois.close();
+            fis.close();
+        }
+        catch(IOException e)
+        {
+            System.out.println("Couldn't deserialize database file");
+        }
+        catch(ClassNotFoundException e)
+        {
+            System.out.println("Object serialized doesn't correspond to expected class");
+        }
     }
 
     public String generateFileId(File file)
@@ -322,7 +363,7 @@ public class Peer implements BackupService
 
                 byte[] buffer = new byte[bufferSize];
 
-                bytesRead = bis.read(buffer);
+                bytesRead += bis.read(buffer);
 
                 if(!sendPutChunck(fileId, buffer, partCounter, replication))
                     return;

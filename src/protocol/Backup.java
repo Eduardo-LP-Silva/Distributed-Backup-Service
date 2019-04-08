@@ -11,7 +11,7 @@ import java.io.FileOutputStream;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
-public class Backup extends Thread
+public class Backup extends ProtocolThread
 {
     private MulticastSocket mdbSocket;
 
@@ -20,19 +20,15 @@ public class Backup extends Thread
     private int mcPort;
     private InetAddress mcAddr;
 
-    private String id;
+    private int id;
     private String version;
 
-    private Hashtable<String, int[]> storedChuncksReplication; //fileID-ChunckNo -> {replication_expected, actual_replication}
-
-    public Backup(String id, String version, int mcPort, InetAddress mcAddr, int mdbPort, InetAddress mdbAddr)
+    public Backup(int id, String version, int mcPort, InetAddress mcAddr, int mdbPort, InetAddress mdbAddr)
     {
         this.mcPort = mcPort;
         this.mcAddr = mcAddr;
         this.id = id;
         this.version = version;
-
-        storedChuncksReplication = new Hashtable<String, int[]>();
 
         try
         {
@@ -87,7 +83,7 @@ public class Backup extends Thread
                         break;
 
                     case "STORED":
-                        updateChunckReplication(msgParams);
+                        handleStored(msgParams);
                         break;
 
                     default:
@@ -115,7 +111,7 @@ public class Backup extends Thread
             return;
         }
 
-        if(msgParams[2].equals(id)) //Peer that initiated backup cannot store chuncks
+        if(msgParams[2].equals("" + id)) //Peer that initiated backup cannot store chuncks
             return;
 
         String fileId = msgParams[3], chunckNo = msgParams[4], replication = msgParams[5],
@@ -129,26 +125,30 @@ public class Backup extends Thread
         {
             if(chunckFile.createNewFile()) //If chunck doesn't exist already
             {
-                for(int i = 0; i < bytes.length - 1; i++)
-                    if(bytes[i] == 13 && bytes[i + 1] == 10) //CRLF's
-                        for(int j = i + 2; j < bytes.length - 1; j++)
-                            if(bytes[j] == 13 && bytes[j + 1] == 10)
-                            {
-                                j += 2;
+                for(int i = 0; i < bytes.length - 4; i++)
+                    if(bytes[i] == 13 && bytes[i + 1] == 10 && bytes[i + 2] == 13 && bytes[i + 3] == 10) //CRLF's
+                    {
+                        i += 4;
 
-                                byte[] body = new byte[bytes.length - j];
+                        byte[] body = new byte[bytes.length - i];
 
-                                System.arraycopy(bytes, j, body, 0, body.length);
+                        System.arraycopy(bytes, i, body, 0, body.length);
 
-                                FileOutputStream fos = new FileOutputStream(chunckFile);
+                        FileOutputStream fos = new FileOutputStream(chunckFile);
 
-                                fos.write(body);
-                                fos.close();
-                            }
+                        fos.write(body);
+                        fos.close();
+
+                        backedUpChuncks.put(fileId + "-" + chunckNo, new int[] {Integer.parseInt(replication), 1, 
+                            bytes.length - i});
+
+                        sendStored(fileId, chunckNo);
+                        saveTableToDisk();
+                    }
             }
-
-            storedChuncksReplication.put(fileId + "-" + chunckNo, new int[] {Integer.parseInt(replication), 1});
-            sendStored(fileId, chunckNo);
+            else
+                if(backedUpChuncks.get(fileId + "-" + chunckNo) != null)
+                    sendStored(fileId, chunckNo);
         }
         catch(IOException e)
         {
@@ -184,7 +184,7 @@ public class Backup extends Thread
         }
     }
 
-    public void updateChunckReplication(String[] msgParams)
+    public void handleStored(String[] msgParams)
     {
         if(!checkVersion(msgParams[1]))
             return;
@@ -198,10 +198,11 @@ public class Backup extends Thread
         String fileId = msgParams[3], chunckNo = msgParams[4], key = fileId + "-" + chunckNo;
         int[] replications;
 
-        if((replications = storedChuncksReplication.get(key)) != null)
+        if((replications = backedUpChuncks.get(key)) != null)
         {
             replications[1]++;
-            storedChuncksReplication.put(key, replications);
+            backedUpChuncks.put(key, replications);
+            saveTableToDisk();
         }
 
     }
