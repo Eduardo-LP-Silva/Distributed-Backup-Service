@@ -44,4 +44,9 @@ public abstract class ProtocolThread extends Thread
         }
             
     }
+
+    public static Hashtable<String, int[]> getTable()
+    {
+        return backedUpChuncks;
+    }
 }
