@@ -1,7 +1,6 @@
 package protocol;
 
 import java.net.MulticastSocket;
-import java.util.Hashtable;
 import java.net.InetAddress;
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -10,6 +9,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
+import java.util.ArrayList;
 
 public class Backup extends ProtocolThread
 {
@@ -139,11 +139,23 @@ public class Backup extends ProtocolThread
                         fos.write(body);
                         fos.close();
 
-                        backedUpChuncks.put(fileId + "-" + chunckNo, new int[] {Integer.parseInt(replication), 1, 
+                        String key = fileId + "-" + chunckNo;
+
+                        backedUpChuncks.put(key, new int[] {Integer.parseInt(replication), 
                             bytes.length - i});
 
+                        ArrayList<Integer> chunckLocation = chuncksStorage.get(key);
+
+                        if(chunckLocation == null)
+                            chunckLocation = new ArrayList<Integer>();
+                        
+                        chunckLocation.add(id);
+                        
+                        chuncksStorage.put(fileId + "-" + chunckNo, chunckLocation);
+
                         sendStored(fileId, chunckNo);
-                        saveTableToDisk();
+                        saveTableToDisk(1);
+                        saveTableToDisk(2);
                     }
             }
             else
@@ -195,14 +207,27 @@ public class Backup extends ProtocolThread
             return;
         }
 
+        int senderId = Integer.parseInt(msgParams[2]);
         String fileId = msgParams[3], chunckNo = msgParams[4], key = fileId + "-" + chunckNo;
-        int[] replications;
+        ArrayList<Integer> chunckLocation = chuncksStorage.get(key);
 
-        if((replications = backedUpChuncks.get(key)) != null)
+        if(chunckLocation != null)
         {
-            replications[1]++;
-            backedUpChuncks.put(key, replications);
-            saveTableToDisk();
+            if(chunckLocation.contains(senderId))
+                return;
+            else
+            {
+                chunckLocation.add(senderId);
+                chuncksStorage.put(key, chunckLocation);
+                saveTableToDisk(2);
+            }
+        }
+        else
+        {
+            chunckLocation = new ArrayList<Integer>();
+            chunckLocation.add(senderId);
+            chuncksStorage.put(key, chunckLocation);
+            saveTableToDisk(2);
         }
 
     }

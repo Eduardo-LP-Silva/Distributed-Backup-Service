@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
+import java.util.ArrayList;
 import java.util.Hashtable;
 
 public class Peer implements BackupService
@@ -100,7 +101,7 @@ public class Peer implements BackupService
             control.start();
             backup.start();
             restore.start();
-            delete.start();
+            //delete.start();
 
             System.out.println("Started threads");
         }
@@ -124,33 +125,63 @@ public class Peer implements BackupService
         try
         {
             fis = new FileInputStream("backedChuncks.ser");
+
+            try
+            {
+                ObjectInputStream ois = new ObjectInputStream(fis);
+
+                ProtocolThread.setBackupUpChuncksTable((Hashtable<String, int[]>) ois.readObject());
+
+                ois.close();
+                fis.close();
+            }
+            catch(IOException e)
+            {
+                System.out.println("Couldn't deserialize backed chuncks file");
+            }
+            catch(ClassNotFoundException e)
+            {
+                System.out.println("Object serialized doesn't correspond to expected class");
+            }
         }
         catch(FileNotFoundException e)
         {
-            System.out.println("Couldn't find previous database file, generating new one...");
+            System.out.println("Couldn't find previous stored chuncks database file, generating new one...");
 
-            ProtocolThread.setRecordsTable(new Hashtable<String, int[]>());
-            ProtocolThread.saveTableToDisk();
-            return;
+            ProtocolThread.setBackupUpChuncksTable(new Hashtable<String, int[]>());
+            ProtocolThread.saveTableToDisk(1);
         }
 
         try
         {
-            ObjectInputStream ois = new ObjectInputStream(fis);
+            fis = new FileInputStream("chuncksStorage.ser");
 
-            ProtocolThread.setRecordsTable((Hashtable<String, int[]>) ois.readObject());
+            try
+            {
+                ObjectInputStream ois = new ObjectInputStream(fis);
 
-            ois.close();
-            fis.close();
+                ProtocolThread.setChuncksStorageTable((Hashtable<String, ArrayList<Integer>>) ois.readObject());
+
+                ois.close();
+                fis.close();
+            }
+            catch(IOException e)
+            {
+                System.out.println("Couldn't deserialize backed chuncks file");
+            }
+            catch(ClassNotFoundException e)
+            {
+                System.out.println("Object serialized doesn't correspond to expected class");
+            }
         }
-        catch(IOException e)
+        catch(FileNotFoundException e)
         {
-            System.out.println("Couldn't deserialize database file");
+            System.out.println("Couldn't find previous chuncks storage database file, generating new one...");
+
+            ProtocolThread.setChuncksStorageTable(new Hashtable<String, ArrayList<Integer>>());
+            ProtocolThread.saveTableToDisk(2);
         }
-        catch(ClassNotFoundException e)
-        {
-            System.out.println("Object serialized doesn't correspond to expected class");
-        }
+        
     }
 
     public String generateFileId(File file)
