@@ -14,10 +14,10 @@ public class Restore extends Thread
     private DatagramSocket controlSocket;
 
     private int mcPort;
-    private InetAddress mcAddr; 
+    private InetAddress mcAddr;
 
     private int mdrPort;
-    private InetAddress mdrAddr; 
+    private InetAddress mdrAddr;
 
     public Restore(int mcPort, InetAddress mcAddr, int mdrPort, InetAddress mdrAddr)
     {
@@ -25,7 +25,7 @@ public class Restore extends Thread
         this.mcAddr = mcAddr;
         this.mdrPort = mdrPort;
         this.mdrAddr = mdrAddr;
-        
+
         try
         {
             mdrSocket = new MulticastSocket(mdrPort);
@@ -44,21 +44,57 @@ public class Restore extends Thread
     @Override
     public void run()
     {
-        while(true)
-        {
-            byte[] buf = new byte[1024];
-            DatagramPacket receivedPacket = new DatagramPacket(buf, buf.length);
-            
-            try
-            {
-                mdrSocket.receive(receivedPacket);
+      String msg;
+      String[] msgParams;
 
-                //TODO Complete
-            }
-            catch(IOException e)
-            {
-                System.out.println("Couldn't receive packet");
-            }
-        }
+      while(true)
+      {
+          byte[] buf = new byte[64100];
+          DatagramPacket receivedPacket = new DatagramPacket(buf, buf.length);
+
+          try
+          {
+              mdrSocket.receive(receivedPacket);
+
+              byte[] actualData = new byte[receivedPacket.getLength()];
+
+              System.arraycopy(receivedPacket.getData(), 0, actualData, 0, actualData.length);
+
+              msg = new String(actualData).trim();
+
+              msgParams = msg.split("\\s+");
+
+              if(msgParams.length == 0)
+              {
+                  System.out.println("Corrupt message @ restore");
+                  continue;
+              }
+
+              for(int i = 0; i < msgParams.length; i++)
+                  msgParams[i] = msgParams[i].trim();
+
+              switch(msgParams[0])
+              {
+                  case "GETCHUNK":
+                      System.out.println("Received a getchunk");
+                      // putChunck(msgParams, actualData);
+                      break;
+
+                  case "STORED":
+                      System.out.println("Received a stored");
+                      break;
+
+                  default:
+                      System.out.println("Couldn't identify message in backup: " + msgParams[0]);
+              }
+
+
+          }
+          catch(IOException e)
+          {
+              System.out.println("Couldn't receive packet");
+          }
+
+      }
     }
 }

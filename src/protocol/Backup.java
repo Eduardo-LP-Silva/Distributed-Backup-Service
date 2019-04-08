@@ -18,7 +18,7 @@ public class Backup extends ProtocolThread
     private DatagramSocket controlSocket;
 
     private int mcPort;
-    private InetAddress mcAddr; 
+    private InetAddress mcAddr;
 
     private int id;
     private String version;
@@ -54,7 +54,7 @@ public class Backup extends ProtocolThread
         {
             byte[] buf = new byte[64100];
             DatagramPacket receivedPacket = new DatagramPacket(buf, buf.length);
-            
+
             try
             {
                 mdbSocket.receive(receivedPacket);
@@ -89,14 +89,14 @@ public class Backup extends ProtocolThread
                     default:
                         System.out.println("Couldn't identify message in backup: " + msgParams[0]);
                 }
-                    
-                
+
+
             }
             catch(IOException e)
             {
                 System.out.println("Couldn't receive packet");
             }
-            
+
         }
     }
 
@@ -114,13 +114,13 @@ public class Backup extends ProtocolThread
         if(msgParams[2].equals("" + id)) //Peer that initiated backup cannot store chuncks
             return;
 
-        String fileId = msgParams[3], chunckNo = msgParams[4], replication = msgParams[5], 
+        String fileId = msgParams[3], chunckNo = msgParams[4], replication = msgParams[5],
             path = id + "/backup/" + fileId;
 
         new File(path).mkdirs();
 
         File chunckFile = new File(path + "/chk" + chunckNo);
-        
+
         try
         {
             if(chunckFile.createNewFile()) //If chunck doesn't exist already
@@ -166,7 +166,7 @@ public class Backup extends ProtocolThread
         {
             System.out.println("Couldn't write chunck into file");
             return;
-        }    
+        }
     }
 
     public void sendStored(String fileId, String chunckNo)
@@ -185,7 +185,7 @@ public class Backup extends ProtocolThread
         {
             System.out.println("Couldn't sleep before sending STORED response");
         }
-        
+
         try
         {
             controlSocket.send(packet);
