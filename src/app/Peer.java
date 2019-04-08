@@ -5,7 +5,7 @@ import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.net.SocketException;
-import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -14,37 +14,53 @@ import java.rmi.server.UnicastRemoteObject;
 import java.security.MessageDigest;
 import java.rmi.registry.Registry;
 import protocol.*;
+import protocol.initiator.Backup;
+import protocol.listener.MDB;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.FileNotFoundException;
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.util.ArrayList;
 import java.util.Hashtable;
+import java.util.Set;
 
-public class Peer implements BackupService
+public class Peer extends Thread implements BackupService 
 {
-    private static DatagramSocket controlSocket;
-    private static DatagramSocket backupSocket;
-    private static DatagramSocket restoreSocket;
-    private static DatagramSocket deleteSocket;
-    private static int mcPort, mdbPort, mdrPort;
-    private static String mcAddr, mdbAddr, mdrAddr;
-    private static int id;
-    private static String accessPoint;
-    private static String version;
+    protected static DatagramSocket controlSocket;
+    protected static DatagramSocket backupSocket;
+    protected static DatagramSocket restoreSocket;
+    protected static DatagramSocket deleteSocket;
+    protected static int mcPort, mdbPort, mdrPort;
+    protected static InetAddress mcAddr, mdbAddr, mdrAddr;
+    protected static int id;
+    protected static String accessPoint;
+    protected static String version;
+    protected static Hashtable<String, int[]> backedUpChuncks; //fileID-ChunckNo -> {replication_expected, size}
+    protected static Hashtable<String, ArrayList<Integer>> chuncksStorage; //fileID-ChunckNo -> {1, 2, ...}
 
     public static void main(String args[])
     {
         System.setProperty("java.net.preferIPv4Stack", "true");
         if(args.length >= 3)
         {
-            mcAddr = "224.0.0.1";
-            mdbAddr = "224.0.0.1";
-            mdrAddr = "224.0.0.1";
+            try
+            {
+                mcAddr = InetAddress.getByName("224.0.0.1");
+                mdbAddr = InetAddress.getByName("224.0.0.1");
+                mdrAddr = InetAddress.getByName("224.0.0.1");
+            }
+            catch(UnknownHostException e)
+            {
+                System.out.println("Unknown Host");
+                return;
+            }
+            
 
             mcPort = 5001;
             mdbPort = 5002;
@@ -65,14 +81,23 @@ public class Peer implements BackupService
 
         if (args.length == 9)
         {
-            mcAddr = args[3];
-            mcPort = Integer.parseInt(args[4]);
-
-            mdbAddr = args[5];
-            mdbPort = Integer.parseInt(args[6]);
-
-            mdrAddr = args[7];
-            mdrPort = Integer.parseInt(args[8]);
+            try
+            {
+                mcAddr = InetAddress.getByName(args[3]);
+                mcPort = Integer.parseInt(args[4]);
+    
+                mdbAddr = InetAddress.getByName(args[5]);
+                mdbPort = Integer.parseInt(args[6]);
+    
+                mdrAddr = InetAddress.getByName(args[7]);
+                mdrPort = Integer.parseInt(args[8]);
+            }
+            catch(UnknownHostException e)
+            {
+                System.out.println("Unknown Host");
+                return;
+            }
+            
         }
 
         generateDataBase();
@@ -93,13 +118,13 @@ public class Peer implements BackupService
 
         try
         {
-            Control control = new Control(mcPort, InetAddress.getByName(mcAddr));
-            Backup backup = new Backup(id, version, mcPort, InetAddress.getByName(mcAddr), mdbPort, InetAddress.getByName(mdbAddr));
-            Restore restore = new Restore(mcPort, InetAddress.getByName(mcAddr), mdrPort, InetAddress.getByName(mdrAddr));
-            Delete delete = new Delete(id, mcPort, InetAddress.getByName(mcAddr), mdbPort, InetAddress.getByName(mdbAddr));
+            MDB mdbListener = new MDB();
+            Control control = new Control(mcPort, mcAddr);
+            Restore restore = new Restore(mcPort, mcAddr, mdrPort, mdrAddr);
+            Delete delete = new Delete(id, mcPort, mcAddr, mdbPort, mdbAddr);
 
+            mdbListener.start();
             control.start();
-            backup.start();
             restore.start();
             //delete.start();
 
@@ -109,6 +134,84 @@ public class Peer implements BackupService
         {
             System.out.println("Could't create threads");
         }
+    }
+
+    public static void saveTableToDisk(int table)
+    {
+        FileOutputStream fos;
+
+        try
+        {
+            if(table == 1)
+                fos = new FileOutputStream("backedChuncks.ser");
+            else
+                if(table == 2)
+                    fos = new FileOutputStream("chuncksStorage.ser");
+                else
+                {
+                    System.out.println("Invalid table to save to disk");
+                    return;
+                }
+
+            ObjectOutputStream oos = new ObjectOutputStream(fos);
+
+            oos.writeObject(backedUpChuncks);
+            oos.close();
+            fos.close();
+        }
+        catch(IOException e)
+        {
+            System.out.println("Couldn't save table to disk");
+        }
+    }
+
+    public static void printLocalChuncksTable()
+    {
+        Set<String> keys = backedUpChuncks.keySet();
+
+        for(String key: keys)
+        {
+            int[] values = backedUpChuncks.get(key);
+
+            System.out.print(key + "-> [");
+            
+            for(int i = 0; i < values.length; i++)
+            {
+                System.out.print(values[i]);
+
+                if(i != values.length - 1)
+                    System.out.print(", ");
+            }
+
+            System.out.println("]");
+        }    
+    }
+
+    public boolean checkVersion(String msgVersion)
+    {
+        return version.equals(msgVersion);
+    }
+
+    public static void printChuncksStorageTable()
+    {
+        Set<String> keys = chuncksStorage.keySet();
+
+        for(String key: keys)
+        {
+            ArrayList<Integer> values = chuncksStorage.get(key);
+
+            System.out.print(key + "-> [");
+            
+            for(int i = 0; i < values.size(); i++)
+            {
+                System.out.print(values.get(i));
+
+                if(i != values.size() - 1)
+                    System.out.print(", ");
+            }
+
+            System.out.println("]");
+        }    
     }
 
     public static void createDirectory()
@@ -130,7 +233,7 @@ public class Peer implements BackupService
             {
                 ObjectInputStream ois = new ObjectInputStream(fis);
 
-                ProtocolThread.setBackupUpChuncksTable((Hashtable<String, int[]>) ois.readObject());
+                Peer.setBackupUpChuncksTable((Hashtable<String, int[]>) ois.readObject());
 
                 ois.close();
                 fis.close();
@@ -148,8 +251,8 @@ public class Peer implements BackupService
         {
             System.out.println("Couldn't find previous stored chuncks database file, generating new one...");
 
-            ProtocolThread.setBackupUpChuncksTable(new Hashtable<String, int[]>());
-            ProtocolThread.saveTableToDisk(1);
+            Peer.setBackupUpChuncksTable(new Hashtable<String, int[]>());
+            Peer.saveTableToDisk(1);
         }
 
         try
@@ -160,7 +263,7 @@ public class Peer implements BackupService
             {
                 ObjectInputStream ois = new ObjectInputStream(fis);
 
-                ProtocolThread.setChuncksStorageTable((Hashtable<String, ArrayList<Integer>>) ois.readObject());
+                Peer.setChuncksStorageTable((Hashtable<String, ArrayList<Integer>>) ois.readObject());
 
                 ois.close();
                 fis.close();
@@ -178,8 +281,8 @@ public class Peer implements BackupService
         {
             System.out.println("Couldn't find previous chuncks storage database file, generating new one...");
 
-            ProtocolThread.setChuncksStorageTable(new Hashtable<String, ArrayList<Integer>>());
-            ProtocolThread.saveTableToDisk(2);
+            Peer.setChuncksStorageTable(new Hashtable<String, ArrayList<Integer>>());
+            Peer.saveTableToDisk(2);
         }
         
     }
@@ -230,30 +333,7 @@ public class Peer implements BackupService
         }
     }
 
-    public boolean sendPutChunck(String fileId, byte[] chunck, int chuckNo, int replication)
-    {
-        String msg = "PUTCHUNCK " + version + " " + id + " " + fileId + " " + chuckNo + " " + replication
-            + " \r\n\r\n";
-
-        byte[] header = msg.getBytes();
-        byte[] putchunck = new byte[header.length + chunck.length];
-
-        System.arraycopy(header, 0, putchunck, 0, header.length);
-        System.arraycopy(chunck, 0, putchunck, header.length, chunck.length);
-
-        try
-        {
-            DatagramPacket packet = new DatagramPacket(putchunck, putchunck.length, InetAddress.getByName(mdbAddr), mdbPort);
-
-            backupSocket.send(packet);
-        }
-        catch(Exception e)
-        {
-            System.out.println("Couldn't send putchunck");
-        }
-
-        return true;
-    }
+    
 
     public boolean sendGetChunk(String fileId, byte[] chunk, int chunkNo){
       String msg = "GETCHUNK " + version + " " + id + " " + fileId + " " + chunkNo + " " + " \r\n\r\n";
@@ -266,7 +346,7 @@ public class Peer implements BackupService
 
       try
       {
-          DatagramPacket packet = new DatagramPacket(getchunk, getchunk.length, InetAddress.getByName(mdbAddr), mdrPort);
+          DatagramPacket packet = new DatagramPacket(getchunk, getchunk.length, mdbAddr, mdrPort);
 
           restoreSocket.send(packet);
       }
@@ -278,146 +358,12 @@ public class Peer implements BackupService
       return true;
     }
 
-    public boolean receiveStored(int timeout, int replication, String fileId, int chunckNo)
-    {
-        byte[] buffer = new byte[64100];
-        DatagramPacket receivedPacket = new DatagramPacket(buffer, buffer.length);
-        int replicationCounter = 0;
-        MulticastSocket mcSocket;
-
-        try
-        {
-            mcSocket = new MulticastSocket(mcPort);
-
-            mcSocket.joinGroup(InetAddress.getByName(mcAddr));
-            mcSocket.setTimeToLive(1);
-            mcSocket.setSoTimeout(timeout);
-        }
-        catch(IOException e)
-        {
-            System.out.println("Couldn't open multicast socket to receive STORED messages");
-            return false;
-        }
-
-        try
-        {
-            while(replicationCounter < replication)
-            {
-                mcSocket.receive(receivedPacket);
-
-                byte[] actualData = new byte[receivedPacket.getLength()];
-
-                System.arraycopy(receivedPacket.getData(), 0, actualData, 0, actualData.length);
-
-                String msg = new String(actualData).trim();
-                String[] msgParams = msg.split("\\s+");
-
-                if(msgParams.length == 0)
-                {
-                    System.out.println("Corrupt message @ peer.receivePut");
-                    continue;
-                }
-
-                for(int i = 0; i < msgParams.length; i++)
-                    msgParams[i] = msgParams[i].trim();
-
-                if(msgParams[0].equals("STORED"))
-                {
-                    if(msgParams.length < 5)
-                    {
-                        System.out.println("Invalid STORED message");
-                        continue;
-                    }
-
-                    String version = msgParams[1], fileIdReceived = msgParams[3], chunckNoReceived = msgParams[4];
-
-                    if(!version.equals(Peer.version) || !fileIdReceived.equals(fileId)
-                        || Integer.parseInt(chunckNoReceived) != chunckNo)
-                        continue;
-                    else
-                        replicationCounter++;
-                }
-            }
-        }
-        catch(Exception e)
-        {
-            if(e instanceof SocketTimeoutException)
-                System.out.println("Didn't received required PUT answers to meet replication demands");
-            else
-                System.out.println("Couldn't received PUT");
-
-            mcSocket.close();
-            return false;
-        }
-
-        mcSocket.close();
-        return true;
-    }
+    
 
     public void backupFile(String path, int replication)
     {
-        File file = new File(path);
-
-        if(!file.exists())
-        {
-            System.out.println("Couldn't find file to backup: " + path);
-            return;
-        }
-
-        if(replication <= 0)
-        {
-            System.out.println("Invalid replication degree:" + replication);
-            return;
-        }
-
-        String fileId = generateFileId(file);
-        int fileSize = (int) file.length();
-        int partCounter,  nChuncks = (int) Math.ceil((double) fileSize / 64000);
-        int responseWaitingTime = 1 * 1000;
-        int attemptNo = 1;
-
-        if(fileSize % 64000 == 0)
-            nChuncks += 1;
-
-        try(FileInputStream fis = new FileInputStream(file); BufferedInputStream bis = new BufferedInputStream(fis);)
-        {
-            int bytesRead = 0;
-
-            for(partCounter = 0; partCounter < nChuncks; partCounter++)
-            {
-                int aux = (int) file.length() - bytesRead, bufferSize;
-
-                if (aux > 64000)
-                    bufferSize = 64000; //Maximum chunck size
-                else
-                    bufferSize = aux;
-
-                byte[] buffer = new byte[bufferSize];
-
-                bytesRead += bis.read(buffer);
-
-                if(!sendPutChunck(fileId, buffer, partCounter, replication))
-                    return;
-
-                while(attemptNo <= 5)
-                {
-                    if(receiveStored(responseWaitingTime, replication, fileId, partCounter))
-                        break;
-                    else
-                    {
-                        responseWaitingTime *= 2;
-                        attemptNo++;
-                    }
-                }
-
-                if(attemptNo > 5)
-                    System.out.println("Max attempts to send PUTCHUNCK reached\nChunck not stored with required replication");
-            }
-        }
-        catch(Exception e)
-        {
-            System.out.println("Couldn't separate file into chuncks");
-        }
+        Backup backup = new Backup(path, replication);
+        backup.start();
     }
 
     public void restoreFile(String path)
@@ -501,7 +447,7 @@ public class Peer implements BackupService
       {
           mcSocket = new MulticastSocket(mcPort);
 
-          mcSocket.joinGroup(InetAddress.getByName(mcAddr));
+          mcSocket.joinGroup(mcAddr);
           mcSocket.setTimeToLive(1);
       }
       catch(IOException e)
@@ -529,8 +475,8 @@ public class Peer implements BackupService
 
               int replication = -1;
 
-              if(!sendPutChunck(fileId, buffer, partCounter, replication))
-                  return;
+              //if(!sendPutChunck(fileId, buffer, partCounter, replication))
+                //  return;
 
               /*
               while(attemptNo <= 5)
@@ -559,5 +505,35 @@ public class Peer implements BackupService
     public void retrieveInfo()
     {
         //TODO Get info
+    }
+
+    public static void setVersion(String version)
+    {
+        Peer.version = version;
+    }
+
+    public static void setId(int id)
+    {
+        Peer.id = id;
+    }
+
+    public static void setBackupUpChuncksTable(Hashtable<String, int[]> newTable)
+    {
+        backedUpChuncks = newTable;
+    }
+
+    public static void setChuncksStorageTable(Hashtable<String, ArrayList<Integer>> newTable)
+    {
+        chuncksStorage = newTable;
+    }
+
+    public static Hashtable<String, int[]> getLocalChuncksTable()
+    {
+        return backedUpChuncks;
+    }
+
+    public static Hashtable<String, ArrayList<Integer>> getChuncksStorageTable()
+    {
+        return chuncksStorage;
     }
 }
