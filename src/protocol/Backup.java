@@ -11,7 +11,7 @@ import java.io.FileOutputStream;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
-public class Backup extends Thread
+public class Backup extends ProtocolThread
 {
     private MulticastSocket mdbSocket;
 
@@ -23,16 +23,12 @@ public class Backup extends Thread
     private String id;
     private String version;
 
-    private Hashtable<String, int[]> storedChuncksReplication; //fileID-ChunckNo -> {replication_expected, actual_replication}
-
     public Backup(String id, String version, int mcPort, InetAddress mcAddr, int mdbPort, InetAddress mdbAddr)
     {
         this.mcPort = mcPort;
         this.mcAddr = mcAddr;
         this.id = id;
         this.version = version;
-        
-        storedChuncksReplication = new Hashtable<String, int[]>();
 
         try
         {
@@ -145,8 +141,9 @@ public class Backup extends Thread
                     }
             }
 
-            storedChuncksReplication.put(fileId + "-" + chunckNo, new int[] {Integer.parseInt(replication), 1});
+            backedUpChuncks.put(fileId + "-" + chunckNo, new int[] {Integer.parseInt(replication), 1});
             sendStored(fileId, chunckNo);
+            saveTableToDisk();
         }
         catch(IOException e)
         {
@@ -196,10 +193,11 @@ public class Backup extends Thread
         String fileId = msgParams[3], chunckNo = msgParams[4], key = fileId + "-" + chunckNo;
         int[] replications;
 
-        if((replications = storedChuncksReplication.get(key)) != null)
+        if((replications = backedUpChuncks.get(key)) != null)
         {
             replications[1]++;
-            storedChuncksReplication.put(key, replications);
+            backedUpChuncks.put(key, replications);
+            saveTableToDisk();
         }
 
     }
