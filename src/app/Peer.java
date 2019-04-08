@@ -183,6 +183,29 @@ public class Peer implements BackupService
         return true;
     }
 
+    public boolean sendGetChunk(String fileId, byte[] chunk, int chunkNo){
+      String msg = "GETCHUNK " + version + " " + id + " " + fileId + " " + chunkNo + " " + " \r\n\r\n";
+
+      byte[] header = msg.getBytes();
+      byte[] getchunk = new byte[header.length + chunk.length];
+
+      System.arraycopy(header, 0, getchunk, 0, header.length);
+      System.arraycopy(chunk, 0, getchunk, header.length, chunk.length);
+
+      try
+      {
+          DatagramPacket packet = new DatagramPacket(getchunk, getchunk.length, InetAddress.getByName(mdbAddr), mdrPort);
+
+          restoreSocket.send(packet);
+      }
+      catch(Exception e)
+      {
+          System.out.println("Couldn't send getchunk");
+      }
+
+      return true;
+    }
+
     public boolean receiveStored(int timeout, int replication, String fileId, int chunckNo)
     {
         byte[] buffer = new byte[64100];
@@ -236,7 +259,7 @@ public class Peer implements BackupService
 
                     String version = msgParams[1], fileIdReceived = msgParams[3], chunckNoReceived = msgParams[4];
 
-                    if(!version.equals(Peer.version) || !fileIdReceived.equals(fileId) 
+                    if(!version.equals(Peer.version) || !fileIdReceived.equals(fileId)
                         || Integer.parseInt(chunckNoReceived) != chunckNo)
                         continue;
                     else
@@ -314,7 +337,7 @@ public class Peer implements BackupService
                         attemptNo++;
                     }
                 }
-                
+
                 if(attemptNo > 5)
                     System.out.println("Max attempts to send PUTCHUNCK reached\nChunck not stored with required replication");
             }
@@ -333,6 +356,41 @@ public class Peer implements BackupService
       {
           System.out.println("Couldn't find file to restore: " + path);
           return;
+      }
+
+      String fileId = generateFileId(file);
+      int fileSize = (int) file.length();
+      int partCounter,  nChuncks = (int) Math.ceil((double) fileSize / 64000);
+      int responseWaitingTime = 1 * 1000;
+      int attemptNo = 1;
+
+      if(fileSize % 64000 == 0)
+          nChuncks += 1;
+
+      try(FileInputStream fis = new FileInputStream(file); BufferedInputStream bis = new BufferedInputStream(fis);)
+      {
+        int bytesRead = 0;
+
+        for(partCounter = 0; partCounter < nChuncks; partCounter++)
+        {
+            int aux = (int) file.length() - bytesRead, bufferSize;
+
+            if (aux > 64000)
+                bufferSize = 64000; //Maximum chunck size
+            else
+                bufferSize = aux;
+
+            byte[] buffer = new byte[bufferSize];
+
+            bytesRead = bis.read(buffer);
+
+            if(!sendGetChunk(fileId, buffer, partCounter))
+                return;
+        }
+      }
+      catch(Exception e)
+      {
+          System.out.println("Couldn't separate file into chuncks");
       }
     }
 

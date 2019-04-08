@@ -18,7 +18,7 @@ public class Backup extends Thread
     private DatagramSocket controlSocket;
 
     private int mcPort;
-    private InetAddress mcAddr; 
+    private InetAddress mcAddr;
 
     private String id;
     private String version;
@@ -31,7 +31,7 @@ public class Backup extends Thread
         this.mcAddr = mcAddr;
         this.id = id;
         this.version = version;
-        
+
         storedChuncksReplication = new Hashtable<String, int[]>();
 
         try
@@ -58,7 +58,7 @@ public class Backup extends Thread
         {
             byte[] buf = new byte[64100];
             DatagramPacket receivedPacket = new DatagramPacket(buf, buf.length);
-            
+
             try
             {
                 mdbSocket.receive(receivedPacket);
@@ -93,14 +93,14 @@ public class Backup extends Thread
                     default:
                         System.out.println("Couldn't identify message in backup: " + msgParams[0]);
                 }
-                    
-                
+
+
             }
             catch(IOException e)
             {
                 System.out.println("Couldn't receive packet");
             }
-            
+
         }
     }
 
@@ -118,13 +118,13 @@ public class Backup extends Thread
         if(msgParams[2].equals(id)) //Peer that initiated backup cannot store chuncks
             return;
 
-        String fileId = msgParams[3], chunckNo = msgParams[4], replication = msgParams[5], 
+        String fileId = msgParams[3], chunckNo = msgParams[4], replication = msgParams[5],
             path = id + "/backup/" + fileId;
 
         new File(path).mkdirs();
 
         File chunckFile = new File(path + "/chk" + chunckNo);
-        
+
         try
         {
             if(chunckFile.createNewFile()) //If chunck doesn't exist already
@@ -139,9 +139,9 @@ public class Backup extends Thread
                                 byte[] body = new byte[bytes.length - j];
 
                                 System.arraycopy(bytes, j, body, 0, body.length);
-                                
+
                                 FileOutputStream fos = new FileOutputStream(chunckFile);
-                                
+
                                 fos.write(body);
                                 fos.close();
                             }
@@ -154,7 +154,7 @@ public class Backup extends Thread
         {
             System.out.println("Couldn't write chunck into file");
             return;
-        }    
+        }
     }
 
     public void sendStored(String fileId, String chunckNo)
@@ -173,7 +173,7 @@ public class Backup extends Thread
         {
             System.out.println("Couldn't sleep before sending STORED response");
         }
-        
+
         try
         {
             controlSocket.send(packet);

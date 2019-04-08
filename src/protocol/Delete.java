@@ -62,10 +62,16 @@ public class Delete extends Thread
 
           try
           {
+
+              mdbSocket.receive(receivedPacket);
+
+              msg = new String(receivedPacket.getData()).trim();
+              String[] newMsg = msg.split("\\s+");
+
+            if (newMsg[0] == "DELETE"){
               String path = getFilePath();
               if (path != null){
                 File file = new File(id + "/" + path);
-                System.out.println("Deleted file: " + id + "/" + path);
 
                 if(file.exists())
                 {
@@ -73,11 +79,6 @@ public class Delete extends Thread
                   System.out.println("Deleted file: " + id + "/" + path);
                 }
               }
-
-              mdbSocket.receive(receivedPacket);
-
-              msg = new String(receivedPacket.getData()).trim();
-              String[] newMsg = msg.split("\\s+");
 
               System.out.println("Chunk Removal");
               String chunkId = newMsg[3];
@@ -94,6 +95,7 @@ public class Delete extends Thread
                 chunkFile.delete();
                 System.out.println("Deleted chunkFile: " + chunkPath + "/chk" + chunkNo);
               }
+            }
 
           }
           catch(IOException e)

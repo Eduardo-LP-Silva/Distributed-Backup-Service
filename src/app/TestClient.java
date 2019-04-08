@@ -51,7 +51,15 @@ public class TestClient
                 break;
 
             case "RESTORE":
-                restoreFile(args[2]);
+
+                try
+                {
+                    peer.restoreFile(args[2]);
+                }
+                catch(RemoteException e)
+                {
+                    System.out.println("Couldn't restore service");
+                }
                 break;
 
             case "DELETEENH":
