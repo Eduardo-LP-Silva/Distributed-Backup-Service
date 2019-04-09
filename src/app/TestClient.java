@@ -67,7 +67,14 @@ public class TestClient
                 break;
 
             case "DELETE":
-                deleteFile(args[2]);
+                try
+                {
+                    peer.deleteFile(args[2]);
+                }
+                catch(RemoteException e)
+                {
+                    System.out.println("Couldn't restore service");
+                }
                 break;
 
             case "RECLAIMENH":

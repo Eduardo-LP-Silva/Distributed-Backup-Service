@@ -14,8 +14,12 @@ import java.rmi.server.UnicastRemoteObject;
 import java.security.MessageDigest;
 import java.rmi.registry.Registry;
 import protocol.*;
+import protocol.initiator.Restore;
+import protocol.initiator.Delete;
 import protocol.initiator.Backup;
 import protocol.listener.MDB;
+import protocol.listener.MDR;
+import protocol.listener.MC;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -30,7 +34,7 @@ import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.Set;
 
-public class Peer extends Thread implements BackupService 
+public class Peer extends Thread implements BackupService
 {
     protected static DatagramSocket controlSocket;
     protected static DatagramSocket backupSocket;
@@ -60,7 +64,7 @@ public class Peer extends Thread implements BackupService
                 System.out.println("Unknown Host");
                 return;
             }
-            
+
 
             mcPort = 5001;
             mdbPort = 5002;
@@ -85,10 +89,10 @@ public class Peer extends Thread implements BackupService
             {
                 mcAddr = InetAddress.getByName(args[3]);
                 mcPort = Integer.parseInt(args[4]);
-    
+
                 mdbAddr = InetAddress.getByName(args[5]);
                 mdbPort = Integer.parseInt(args[6]);
-    
+
                 mdrAddr = InetAddress.getByName(args[7]);
                 mdrPort = Integer.parseInt(args[8]);
             }
@@ -97,7 +101,7 @@ public class Peer extends Thread implements BackupService
                 System.out.println("Unknown Host");
                 return;
             }
-            
+
         }
 
         generateDataBase();
@@ -119,14 +123,14 @@ public class Peer extends Thread implements BackupService
         try
         {
             MDB mdbListener = new MDB();
+            MDR mdrListener = new MDR();
+            MC mcListener = new MC();
             Control control = new Control(mcPort, mcAddr);
-            Restore restore = new Restore(mcPort, mcAddr, mdrPort, mdrAddr);
-            Delete delete = new Delete(id, mcPort, mcAddr, mdbPort, mdbAddr);
 
             mdbListener.start();
+            mdrListener.start();
+            mcListener.start();
             control.start();
-            restore.start();
-            delete.start();
 
             System.out.println("Started threads");
         }
@@ -174,7 +178,7 @@ public class Peer extends Thread implements BackupService
             int[] values = backedUpChuncks.get(key);
 
             System.out.print(key + "-> [");
-            
+
             for(int i = 0; i < values.length; i++)
             {
                 System.out.print(values[i]);
@@ -184,7 +188,7 @@ public class Peer extends Thread implements BackupService
             }
 
             System.out.println("]");
-        }    
+        }
     }
 
     public boolean checkVersion(String msgVersion)
@@ -201,7 +205,7 @@ public class Peer extends Thread implements BackupService
             ArrayList<Integer> values = chuncksStorage.get(key);
 
             System.out.print(key + "-> [");
-            
+
             for(int i = 0; i < values.size(); i++)
             {
                 System.out.print(values.get(i));
@@ -211,7 +215,7 @@ public class Peer extends Thread implements BackupService
             }
 
             System.out.println("]");
-        }    
+        }
     }
 
     public static void createDirectory()
@@ -284,7 +288,7 @@ public class Peer extends Thread implements BackupService
             Peer.setChuncksStorageTable(new ConcurrentHashMap<String, ArrayList<Integer>>());
             Peer.saveTableToDisk(2);
         }
-        
+
     }
 
     public String generateFileId(File file)
@@ -333,32 +337,6 @@ public class Peer extends Thread implements BackupService
         }
     }
 
-    
-
-    public boolean sendGetChunk(String fileId, byte[] chunk, int chunkNo){
-      String msg = "GETCHUNK " + version + " " + id + " " + fileId + " " + chunkNo + " " + " \r\n\r\n";
-
-      byte[] header = msg.getBytes();
-      byte[] getchunk = new byte[header.length + chunk.length];
-
-      System.arraycopy(header, 0, getchunk, 0, header.length);
-      System.arraycopy(chunk, 0, getchunk, header.length, chunk.length);
-
-      try
-      {
-          DatagramPacket packet = new DatagramPacket(getchunk, getchunk.length, mdbAddr, mdrPort);
-
-          restoreSocket.send(packet);
-      }
-      catch(Exception e)
-      {
-          System.out.println("Couldn't send getchunk");
-      }
-
-      return true;
-    }
-
-    
 
     public void backupFile(String path, int replication)
     {
@@ -368,133 +346,14 @@ public class Peer extends Thread implements BackupService
 
     public void restoreFile(String path)
     {
-      File file = new File(path);
-
-      if(!file.exists())
-      {
-          System.out.println("Couldn't find file to restore: " + path);
-          return;
-      }
-
-      String fileId = generateFileId(file);
-      int fileSize = (int) file.length();
-      int partCounter,  nChuncks = (int) Math.ceil((double) fileSize / 64000);
-      int responseWaitingTime = 1 * 1000;
-      int attemptNo = 1;
-
-      if(fileSize % 64000 == 0)
-          nChuncks += 1;
-
-      try(FileInputStream fis = new FileInputStream(file); BufferedInputStream bis = new BufferedInputStream(fis);)
-      {
-        int bytesRead = 0;
-
-        for(partCounter = 0; partCounter < nChuncks; partCounter++)
-        {
-            int aux = (int) file.length() - bytesRead, bufferSize;
-
-            if (aux > 64000)
-                bufferSize = 64000; //Maximum chunck size
-            else
-                bufferSize = aux;
-
-            byte[] buffer = new byte[bufferSize];
-
-            bytesRead = bis.read(buffer);
-
-            if(!sendGetChunk(fileId, buffer, partCounter))
-                return;
-        }
-      }
-      catch(Exception e)
-      {
-          System.out.println("Couldn't separate file into chuncks");
-      }
+      Restore restore = new Restore(path);
+      restore.start();
     }
 
     public void deleteFile(String path)
     {
-      File file = new File(path);
-
-      if(!file.exists())
-      {
-          System.out.println("Couldn't find file to delete: " + path);
-          return;
-      }
-
-      try {
-          FileWriter writer = new FileWriter("utils/fileNames.txt");
-          BufferedWriter bufferedWriter = new BufferedWriter(writer);
-
-          bufferedWriter.write(path);
-          bufferedWriter.close();
-          System.out.println("Wrote in file: " + path);
-      } catch (IOException e) {
-          e.printStackTrace();
-      }
-
-      String fileId = generateFileId(file);
-      int fileSize = (int) file.length();
-      int partCounter,  nChuncks = (int) Math.ceil((double) fileSize / 64000);
-      int responseWaitingTime = 1; //seconds
-      int attemptNo = 1;
-      MulticastSocket mcSocket;
-
-      if(fileSize % 64000 == 0)
-          nChuncks += 1;
-
-      try
-      {
-          mcSocket = new MulticastSocket(mcPort);
-
-          mcSocket.joinGroup(mcAddr);
-          mcSocket.setTimeToLive(1);
-      }
-      catch(IOException e)
-      {
-          System.out.println("Couldn't open multicast socket to receive STORED messages");
-          return;
-      }
-
-      try(FileInputStream fis = new FileInputStream(file); BufferedInputStream bis = new BufferedInputStream(fis);)
-      {
-          int bytesRead = 0;
-
-          for(partCounter = 0; partCounter < nChuncks; partCounter++)
-          {
-              int aux = (int) file.length() - bytesRead, bufferSize;
-
-              if (aux > 64000)
-                  bufferSize = 64000; //Maximum chunck size
-              else
-                  bufferSize = aux;
-
-              byte[] buffer = new byte[bufferSize];
-
-              bytesRead = bis.read(buffer);
-
-              int replication = -1;
-
-              //if(!sendPutChunck(fileId, buffer, partCounter, replication))
-                //  return;
-
-              /*
-              while(attemptNo <= 5)
-              {
-                  mcSocket.setSoTimeout(responseWaitingTime * 1000);
-                  receivePut(mcSocket, replication);
-              } */
-
-
-              //Send PUTCHUNCK on multicast then wait <time> for response on mc channel
-          }
-      }
-      catch(Exception e)
-      {
-          System.out.println("Couldn't separate file into chuncks");
-      }
-
-      mcSocket.close();
+      Delete delete = new Delete(path);
+      delete.start();
     }
 
     public void manageStorage()
