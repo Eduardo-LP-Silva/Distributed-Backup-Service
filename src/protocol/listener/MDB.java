@@ -67,11 +67,6 @@ public class MDB extends Peer
                         pc.start();
                         break;
 
-                    case "STORED":
-                        Stored stored = new Stored(msgParams);
-                        stored.start();
-                        break;
-
                     default:
                         System.out.println("Couldn't identify message in backup: " + msgParams[0]);
                 }

@@ -1,9 +1,7 @@
 package app;
 
 import java.net.DatagramSocket;
-import java.net.DatagramPacket;
 import java.net.InetAddress;
-import java.net.MulticastSocket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
@@ -24,12 +22,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileNotFoundException;
-import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.BufferedWriter;
-import java.io.FileWriter;
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.Set;
@@ -146,20 +141,27 @@ public class Peer extends Thread implements BackupService
 
         try
         {
+            ObjectOutputStream oos = null;
+
             if(table == 1)
-                fos = new FileOutputStream("backedChuncks.ser");
+            {
+                fos = new FileOutputStream("database/backedChuncks.ser");
+                oos = new ObjectOutputStream(fos);
+                oos.writeObject(backedUpChuncks);
+            }    
             else
                 if(table == 2)
-                    fos = new FileOutputStream("chuncksStorage.ser");
+                {
+                    fos = new FileOutputStream("database/chuncksStorage.ser");
+                    oos = new ObjectOutputStream(fos);
+                    oos.writeObject(chuncksStorage);
+                }
                 else
                 {
                     System.out.println("Invalid table to save to disk");
                     return;
                 }
 
-            ObjectOutputStream oos = new ObjectOutputStream(fos);
-
-            oos.writeObject(backedUpChuncks);
             oos.close();
             fos.close();
         }
@@ -220,8 +222,8 @@ public class Peer extends Thread implements BackupService
 
     public static void createDirectory()
     {
-        new File(id + "/backup").mkdirs();
-        new File(id + "/restored").mkdirs();
+        new File("database/" + id + "/backup").mkdirs();
+        new File("database/" + id + "/restored").mkdirs();
     }
 
     @SuppressWarnings("unchecked")
@@ -231,7 +233,7 @@ public class Peer extends Thread implements BackupService
 
         try
         {
-            fis = new FileInputStream("backedChuncks.ser");
+            fis = new FileInputStream("database/backedChuncks.ser");
 
             try
             {
@@ -261,7 +263,7 @@ public class Peer extends Thread implements BackupService
 
         try
         {
-            fis = new FileInputStream("chuncksStorage.ser");
+            fis = new FileInputStream("database/chuncksStorage.ser");
 
             try
             {

@@ -6,6 +6,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import app.Peer;
 import protocol.handler.Delete;
+import protocol.handler.Stored;
 // import protocol.handler.Chunk;
 
 public class MC extends Peer
@@ -71,6 +72,11 @@ public class MC extends Peer
                     //     Stored stored = new Stored(msgParams);
                     //     stored.start();
                     //     break;
+
+                    case "STORED":
+                        Stored stored = new Stored(msgParams);
+                        stored.start();
+                        break;
 
                     default:
                         System.out.println("Couldn't identify message in restore: " + msgParams[0]);

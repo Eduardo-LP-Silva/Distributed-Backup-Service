@@ -37,7 +37,7 @@ public class PutChunck extends Peer
             return;
 
         String fileId = msgParams[3], chunckNo = msgParams[4], replication = msgParams[5],
-            path = id + "/backup/" + fileId;
+            path = "database/" + id + "/backup/" + fileId;
 
         new File(path).mkdirs();
 

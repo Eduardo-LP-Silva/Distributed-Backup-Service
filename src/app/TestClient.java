@@ -95,7 +95,7 @@ public class TestClient
         }
     }
 
-    public static void connectToBackupService(String remoteObject) //remoteObject = "Backup Service"
+    public static void connectToBackupService(String remoteObject)
     {
         try
         {
