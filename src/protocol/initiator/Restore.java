@@ -8,6 +8,8 @@ import java.net.DatagramPacket;
 import java.io.IOException;
 import java.net.SocketTimeoutException;
 import app.Peer;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 
 public class Restore extends Peer
 {
@@ -38,6 +40,7 @@ public class Restore extends Peer
         if(fileSize % 64000 == 0)
             nChuncks += 1;
 
+
         try(FileInputStream fis = new FileInputStream(file); BufferedInputStream bis = new BufferedInputStream(fis);)
         {
             int bytesRead = 0;
@@ -55,8 +58,10 @@ public class Restore extends Peer
 
                 bytesRead += bis.read(buffer);
 
-                if(!sendGetChunk(fileId, buffer, partCounter))
-                    return;
+                if(!sendGetChunk(fileId, buffer, partCounter)){
+                  System.out.println("Falhou no snedGetChunk");
+                  return;
+                }
 
                 while(attemptNo <= 5)
                 {
@@ -77,6 +82,9 @@ public class Restore extends Peer
         {
             System.out.println("Couldn't separate file into chunks");
         }
+
+        System.out.println("NUMERO DE CHUNKS");
+        System.out.println(nChuncks);
     }
 
     public boolean receiveChunk(int timeout, String fileId, int chunckNo, byte[] chunk)
@@ -116,12 +124,13 @@ public class Restore extends Peer
                   System.out.println("Corrupt message @ peer.receiveChunk");
               }
 
-
               for(int i = 0; i < msgParams.length; i++)
                   msgParams[i] = msgParams[i].trim();
 
               if(msgParams[0].equals("CHUNK"))
               {
+                System.out.println(msgParams[0]);
+                System.out.println(msgParams[4]);
                   if(msgParams.length < 6)
                   {
                       System.out.println("Invalid CHUNK message");
@@ -132,12 +141,12 @@ public class Restore extends Peer
                         boolean flag = false;
                         for (int i = 0; i < actualData.length; i++){
                           if (i == 0){
-                            FileOutputStream writer = new FileOutputStream("database/1/restored/testFile.txt");
+                            FileOutputStream writer = new FileOutputStream("database/" + id + "/restored/" + trimPath(path));
                             writer.write(("").getBytes());
                             writer.close();
                           }
-                          try (FileOutputStream output = new FileOutputStream("database/1/restored/testFile.txt", true)) {
-                              if(actualData[i] == 13 && actualData[i + 1] == 10 && actualData[i + 2] == 13 && actualData[i + 3] == 10){
+                          try (FileOutputStream output = new FileOutputStream("database/" + id + "/restored/" + trimPath(path), true)) {
+                            if(actualData[i] == 13 && actualData[i + 1] == 10 && actualData[i + 2] == 13 && actualData[i + 3] == 10){
                                 i +=4;
                                 flag = true;
                               }
@@ -163,6 +172,7 @@ public class Restore extends Peer
         }
 
         mdrSocket.close();
+
         return true;
     }
 
@@ -186,5 +196,9 @@ public class Restore extends Peer
         }
 
         return true;
+    }
+
+    public String trimPath(String path){
+      return path.substring(6);
     }
 }

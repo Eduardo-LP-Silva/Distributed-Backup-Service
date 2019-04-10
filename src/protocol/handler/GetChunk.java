@@ -10,6 +10,9 @@ import java.util.ArrayList;
 import java.io.File;
 import java.io.FileOutputStream;
 import app.Peer;
+import java.io.BufferedReader;
+import java.io.FileReader;
+
 
 public class GetChunk extends Peer
 {
@@ -39,62 +42,31 @@ public class GetChunk extends Peer
           System.out.println(msgParams[i]);
         }
 
-
-        String path = "files/testFile.txt";
+        String path = "database/" + id + "/backup/" + msgParams[3] + "/chk" + msgParams[4];
         File file = new File(path);
 
         if(!file.exists())
         {
-            System.out.println("Couldn't find file to backup: " + path);
+            System.out.println("Couldn't find chunk to restore: " + path);
             return;
         }
-
-        String fileId = generateFileId(file);
-        int fileSize = (int) file.length();
-        int partCounter,  nChuncks = (int) Math.ceil((double) fileSize / 64000);
-        int responseWaitingTime = 1 * 1000;
-        int attemptNo = 1;
-
-        if(fileSize % 64000 == 0)
-            nChuncks += 1;
 
         try(FileInputStream fis = new FileInputStream(file); BufferedInputStream bis = new BufferedInputStream(fis);)
         {
             int bytesRead = 0;
 
-            for(partCounter = 0; partCounter < nChuncks; partCounter++)
-            {
-                int aux = (int) file.length() - bytesRead, bufferSize;
+            int aux = (int) file.length();
 
-                if (aux > 64000)
-                    bufferSize = 64000; //Maximum chunck size
-                else
-                    bufferSize = aux;
+            byte[] buffer = new byte[aux];
+            bis.read(buffer);
 
-                byte[] buffer = new byte[bufferSize];
+            sendChunk(msgParams[3], Integer.parseInt(msgParams[4]), buffer);
 
-                bytesRead += bis.read(buffer);
-
-                sendChunk(fileId, partCounter, buffer);
-
-            }
         }
         catch(Exception e)
         {
             System.out.println("Couldn't separate file into chuncks");
         }
-
-
-        // if(msgParams[2].equals("" + id)) //Peer that initiated backup cannot store chuncks
-        //     return;
-        //
-        // String fileId = msgParams[3], chunckNo = msgParams[4], replication = msgParams[5],
-        //     path = id + "/backup/" + fileId;
-        //
-        // new File(path).mkdirs();
-        //
-        // File chunckFile = new File(path + "/chk" + chunckNo);
-
     }
 
     public void sendChunk(String fileId, int chunckNo, byte[] chunk)
