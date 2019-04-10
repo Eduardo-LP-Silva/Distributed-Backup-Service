@@ -6,7 +6,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import app.Peer;
 import protocol.handler.GetChunk;
-// import protocol.handler.Chunk;
+import protocol.handler.Chunk;
 
 public class MDR extends Peer
 {
@@ -67,10 +67,10 @@ public class MDR extends Peer
                         gc.start();
                         break;
 
-                    // case "CHUNK":
-                    //     Stored stored = new Stored(msgParams);
-                    //     stored.start();
-                    //     break;
+                    case "CHUNK":
+                        Chunk chunk = new Chunk(msgParams, actualData);
+                        chunk.start();
+                        break;
 
                     default:
                         System.out.println("Couldn't identify message in restore: " + msgParams[0]);
