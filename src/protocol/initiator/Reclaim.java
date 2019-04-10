@@ -24,26 +24,27 @@ public class Reclaim extends Peer
         int spaceReleased = 0, spaceOccupied;
         ArrayList<Integer> replications;
 
-        if((spaceOccupied = (int) backupFolder.length()) <= maxSpace)
+        if((spaceOccupied = (int) getFolderSize(backupFolder)) <= maxSpace)
             return;
+        
+        if(maxSpace != 0)
+            for(String localChunck: keys)
+            {
+                if((replications = chuncksStorage.get(localChunck)) != null)
+                    if(replications.size() >= backedUpChuncks.get(localChunck)[0])
+                    {
+                        spaceReleased += backedUpChuncks.get(localChunck)[1];
+                        sendRemoved(localChunck);
+                    
+                        if(spaceOccupied - spaceReleased <= maxSpace)
+                            return;
+                    }        
+            }
 
         for(String localChunck: keys)
         {
-            if((replications = chuncksStorage.get(localChunck)) != null)
-                if(replications.size() >= backedUpChuncks.get(localChunck)[0])
-                {
-                    sendRemoved(localChunck);
-                    spaceReleased += backedUpChuncks.get(localChunck)[1];
-
-                    if(spaceOccupied - spaceReleased <= maxSpace)
-                        return;
-                }        
-        }
-
-        for(String localChunck: keys)
-        {
-            sendRemoved(localChunck);
             spaceReleased += backedUpChuncks.get(localChunck)[1];
+            sendRemoved(localChunck);
 
             if(spaceOccupied - spaceReleased <= maxSpace)
                 return;
@@ -70,7 +71,7 @@ public class Reclaim extends Peer
 
         ArrayList<Integer> chunckExternalStorage = chuncksStorage.get(localChunckKey);
         
-        chunckExternalStorage.remove(id);
+        chunckExternalStorage.remove((Object) id);
         chuncksStorage.put(localChunckKey, chunckExternalStorage);
 
         DatagramPacket packet = new DatagramPacket(msgData, msgData.length, mcAddr, mcPort);

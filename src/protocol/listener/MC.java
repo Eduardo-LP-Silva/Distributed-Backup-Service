@@ -6,6 +6,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import app.Peer;
 import protocol.handler.Delete;
+import protocol.handler.Removed;
 import protocol.handler.Stored;
 // import protocol.handler.Chunk;
 
@@ -76,6 +77,11 @@ public class MC extends Peer
                     case "STORED":
                         Stored stored = new Stored(msgParams);
                         stored.start();
+                        break;
+
+                    case "REMOVED":
+                        Removed removed = new Removed(msgParams);
+                        removed.start();
                         break;
 
                     default:

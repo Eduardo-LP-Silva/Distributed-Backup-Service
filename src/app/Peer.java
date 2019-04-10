@@ -11,9 +11,9 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.server.UnicastRemoteObject;
 import java.security.MessageDigest;
 import java.rmi.registry.Registry;
-import protocol.*;
 import protocol.initiator.Restore;
 import protocol.initiator.Delete;
+import protocol.initiator.Reclaim;
 import protocol.initiator.Backup;
 import protocol.listener.MDB;
 import protocol.listener.MDR;
@@ -38,6 +38,7 @@ public class Peer extends Thread implements BackupService
     protected static int mcPort, mdbPort, mdrPort;
     protected static InetAddress mcAddr, mdbAddr, mdrAddr;
     protected static int id;
+    protected static int diskSpace = Integer.MAX_VALUE;
     protected static String accessPoint;
     protected static String version;
     protected static ConcurrentHashMap<String, int[]> backedUpChuncks; //fileID-ChunckNo -> {replication_expected, size}
@@ -120,12 +121,10 @@ public class Peer extends Thread implements BackupService
             MDB mdbListener = new MDB();
             MDR mdrListener = new MDR();
             MC mcListener = new MC();
-            Control control = new Control(mcPort, mcAddr);
 
             mdbListener.start();
             mdrListener.start();
             mcListener.start();
-            control.start();
 
             System.out.println("Started threads");
         }
@@ -350,7 +349,7 @@ public class Peer extends Thread implements BackupService
 
     public void backupFile(String path, int replication)
     {
-        Backup backup = new Backup(path, replication);
+        Backup backup = new Backup(path, replication, true);
         backup.start();
     }
 
@@ -368,7 +367,9 @@ public class Peer extends Thread implements BackupService
 
     public void manageStorage(int maxSpace)
     {
-        
+        diskSpace = maxSpace;
+        Reclaim reclaim = new Reclaim(maxSpace);
+        reclaim.start();
     }
 
     public void retrieveInfo()
@@ -404,5 +405,31 @@ public class Peer extends Thread implements BackupService
     public static ConcurrentHashMap<String, ArrayList<Integer>> getChuncksStorageTable()
     {
         return chuncksStorage;
+    }
+
+    public static int getChunckReplication(String chunckKey)
+    {
+        int rep = 0;
+        ArrayList<Integer> chunckExternalStorage = chuncksStorage.get(chunckKey);
+
+        if(chunckExternalStorage != null)
+            rep = chunckExternalStorage.size();
+
+        return rep;
+    }
+
+    public static int getFolderSize(File folder)
+    {
+        int size = 0;
+
+        for (File file : folder.listFiles()) 
+        {
+            if (file.isFile())
+                size += file.length();
+            else
+                size += getFolderSize(file);
+        }
+
+        return size;
     }
 }

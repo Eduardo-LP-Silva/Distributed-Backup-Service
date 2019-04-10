@@ -13,15 +13,25 @@ public class Backup extends Peer
 {
     private String path;
     private int replication;
+    private boolean file;
 
-    public Backup(String path, int replication)
+    public Backup(String path, int replication, boolean file)
     {
         this.path = path;
         this.replication = replication;
+        this.file = file;
     }
 
     @Override
     public void run()
+    {
+        if(file)
+            backupFile();
+        else
+            backupChunck();
+    }
+
+    public void backupFile()
     {
         File file = new File(path);
 
@@ -80,6 +90,56 @@ public class Backup extends Peer
                 if(attemptNo > 5)
                     System.out.println("Max attempts to send PUTCHUNCK reached\nChunck not stored with required replication");
             }
+        }
+        catch(Exception e)
+        {
+            System.out.println("Couldn't separate file into chuncks");
+        }
+    }
+
+    public void backupChunck()
+    {
+        File chunck = new File(path);
+
+        if(!chunck.exists())
+        {
+            System.out.println("Couldn't find chunck to backup: " + path);
+            return;
+        }
+
+        if(replication <= 0)
+        {
+            System.out.println("Invalid replication degree:" + replication);
+            return;
+        }
+
+        int responseWaitingTime = 1 * 1000;
+        int attemptNo = 1;
+        int chunckSize = (int) chunck.length();
+        String fileId = chunck.getParentFile().getName();
+        int chunckNo = Integer.parseInt(chunck.getName().substring(3));
+
+        try(FileInputStream fis = new FileInputStream(chunck); BufferedInputStream bis = new BufferedInputStream(fis);)
+        {
+            byte[] buffer = new byte[chunckSize];
+
+            if (!sendPutChunck(fileId, buffer, chunckNo, replication))
+                return;
+
+            while (attemptNo <= 5) 
+            {
+                if (receiveStored(responseWaitingTime, replication, fileId, chunckNo))
+                    break;
+                else 
+                {
+                    responseWaitingTime *= 2;
+                    attemptNo++;
+                }
+            }
+
+            if (attemptNo > 5)
+                System.out.println("Max attempts to send PUTCHUNCK reached\nChunck not stored with required replication");
+            
         }
         catch(Exception e)
         {
