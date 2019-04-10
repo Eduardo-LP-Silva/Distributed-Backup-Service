@@ -37,7 +37,11 @@ public class Reclaim extends Peer
                         sendRemoved(localChunck);
                     
                         if(spaceOccupied - spaceReleased <= maxSpace)
+                        {
+                            cleanEmptyFolders();
                             return;
+                        }
+                            
                     }        
             }
 
@@ -47,8 +51,21 @@ public class Reclaim extends Peer
             sendRemoved(localChunck);
 
             if(spaceOccupied - spaceReleased <= maxSpace)
+            {
+                cleanEmptyFolders();
                 return;
+            }
         }
+    }
+
+    public void cleanEmptyFolders()
+    {
+        String databasePath = "database/" + id + "/backup";
+        File backupFolder = new File(databasePath);
+
+        for(File file: backupFolder.listFiles())
+            if(file.listFiles().length == 0)
+                file.delete();
     }
 
     public void sendRemoved(String localChunckKey)
