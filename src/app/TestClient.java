@@ -118,8 +118,6 @@ public class TestClient
             return;
         }
 
-        //TODO Smt
-
         try
         {
             peer.restoreFile(path);
@@ -140,8 +138,6 @@ public class TestClient
             return;
         }
 
-        //TODO Smt
-
         try
         {
             peer.deleteFile(path);
@@ -160,11 +156,9 @@ public class TestClient
             return;
         }
 
-        //TODO Smt
-
         try
         {
-            peer.manageStorage();
+            peer.manageStorage(maxStorage);
         }
         catch(RemoteException e)
         {

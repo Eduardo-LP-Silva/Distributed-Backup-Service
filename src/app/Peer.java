@@ -145,14 +145,14 @@ public class Peer extends Thread implements BackupService
 
             if(table == 1)
             {
-                fos = new FileOutputStream("database/backedChuncks.ser");
+                fos = new FileOutputStream("database/" + id + "/backedChuncks.ser");
                 oos = new ObjectOutputStream(fos);
                 oos.writeObject(backedUpChuncks);
             }    
             else
                 if(table == 2)
                 {
-                    fos = new FileOutputStream("database/chuncksStorage.ser");
+                    fos = new FileOutputStream("database/" + id + "/chuncksStorage.ser");
                     oos = new ObjectOutputStream(fos);
                     oos.writeObject(chuncksStorage);
                 }
@@ -175,6 +175,8 @@ public class Peer extends Thread implements BackupService
     {
         Set<String> keys = backedUpChuncks.keySet();
 
+        System.out.println("--- Backed Up Chuncks ---");
+
         for(String key: keys)
         {
             int[] values = backedUpChuncks.get(key);
@@ -191,6 +193,8 @@ public class Peer extends Thread implements BackupService
 
             System.out.println("]");
         }
+
+        System.out.println("\n");
     }
 
     public boolean checkVersion(String msgVersion)
@@ -201,6 +205,8 @@ public class Peer extends Thread implements BackupService
     public static void printChuncksStorageTable()
     {
         Set<String> keys = chuncksStorage.keySet();
+
+        System.out.println("--- Chuncks Storage ---");
 
         for(String key: keys)
         {
@@ -218,6 +224,8 @@ public class Peer extends Thread implements BackupService
 
             System.out.println("]");
         }
+
+        System.out.println("\n");
     }
 
     public static void createDirectory()
@@ -233,7 +241,7 @@ public class Peer extends Thread implements BackupService
 
         try
         {
-            fis = new FileInputStream("database/backedChuncks.ser");
+            fis = new FileInputStream("database/" + id + "/backedChuncks.ser");
 
             try
             {
@@ -263,7 +271,7 @@ public class Peer extends Thread implements BackupService
 
         try
         {
-            fis = new FileInputStream("database/chuncksStorage.ser");
+            fis = new FileInputStream("database/" + id + "/chuncksStorage.ser");
 
             try
             {
@@ -358,9 +366,9 @@ public class Peer extends Thread implements BackupService
       delete.start();
     }
 
-    public void manageStorage()
+    public void manageStorage(int maxSpace)
     {
-        //TODO Manage storage
+        
     }
 
     public void retrieveInfo()
