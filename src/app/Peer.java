@@ -446,18 +446,18 @@ public class Peer extends Thread implements BackupService
 
         for(String filePath: keys)
         {
-            info += "File: " + filePath + "\n";
+            info += "File: " + filePath + "\n\n";
 
             backUpDetails = backUpRecordsTable.get(filePath);
 
             if(backUpDetails.length != 3)
             {
-                info += "Invalid back up record\n";
+                info += "Invalid back up record\n\n";
                 continue;
             }
 
-            info += "File ID: " + backUpDetails[0] + "\n";
-            info += "Desired Replication: " + backUpDetails[1] + "\n";
+            info += "File ID: " + backUpDetails[0] + "\n\n";
+            info += "Desired Replication: " + backUpDetails[1] + "\n\n";
             info += "Number of Chuncks: " + backUpDetails[2] + "\n\n";
 
             for(int i = 0; i < Integer.parseInt(backUpDetails[2]); i++)
@@ -466,11 +466,11 @@ public class Peer extends Thread implements BackupService
                 externalStorage = chuncksStorage.get(externalStorageKey);
 
                 if(externalStorage != null)
-                    info += "Chunck " + i + " replication: " + externalStorage.size() + "\n";
+                    info += "Chunck " + i + " replication: " + externalStorage.size() + "\n\n";
             }
         }
 
-        info += "\n--- Local Chuncks---\n\n";
+        info += "\n--- Local Chuncks---\n\n\n";
 
         keys = backedUpChuncks.keySet();
 
@@ -481,8 +481,8 @@ public class Peer extends Thread implements BackupService
         {
             chunckParams = localChunckKey.split("-");
 
-            info += "Chunck " + chunckParams[1] + " of file with ID "+ chunckParams[0] + ":\n";
-            info += "\tSize: " + backedUpChuncks.get(localChunckKey)[1] / 1000 + "kB\n";
+            info += "Chunck " + chunckParams[1] + " of file with ID "+ chunckParams[0] + ":\n\n";
+            info += "\t- Size: " + backedUpChuncks.get(localChunckKey)[1] / 1000 + "kB\n\n";
 
             externalStorage = chuncksStorage.get(localChunckKey);
 
@@ -491,15 +491,15 @@ public class Peer extends Thread implements BackupService
             else
                 replication = 0;
 
-            info += "\tReplication: " + replication + "\n";
+            info += "\t- Replication: " + replication + "\n\n";
         }
 
         info += "\n--- Storage Details ---\n\n";
 
         int spaceOccupied = getFolderSize(new File("database/" + id + "/backup"));
 
-        info += "Storage Capacity: " + diskSpace / 1000 + "kB\n";
-        info += "Occupied space: " + spaceOccupied / 1000 + "kB\n";
+        info += "Storage Capacity: " + diskSpace / 1000 + "kB\n\n";
+        info += "Occupied space: " + spaceOccupied / 1000 + "kB\n\n";
 
         return info;
     }
