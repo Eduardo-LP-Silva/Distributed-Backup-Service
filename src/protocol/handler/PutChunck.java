@@ -16,7 +16,6 @@ public class PutChunck extends Peer
 
     public PutChunck(String[] msgParams, byte[] bytes)
     {
-        super();
         this.msgParams = msgParams;
         this.bytes = bytes;
     }
@@ -36,6 +35,19 @@ public class PutChunck extends Peer
         if(msgParams[2].equals("" + id)) //Peer that initiated backup cannot store chuncks
             return;
 
+        int bodyIndex = getBodyIndex(bytes);
+
+        if(bodyIndex == -1)
+        {
+            System.out.println("Couldn't find CRLF sequence in PUTCHUNCK message");
+            return;
+        }
+
+        int chunckSize = bytes.length - bodyIndex;
+
+        if (getFolderSize(new File("database/" + id + "/backup")) + chunckSize > diskSpace)
+            return;
+
         String fileId = msgParams[3], chunckNo = msgParams[4], replication = msgParams[5],
             path = "database/" + id + "/backup/" + fileId;
 
@@ -47,38 +59,32 @@ public class PutChunck extends Peer
         {
             if(chunckFile.createNewFile()) //If chunck doesn't exist already
             {
-                for(int i = 0; i < bytes.length - 4; i++)
-                    if(bytes[i] == 13 && bytes[i + 1] == 10 && bytes[i + 2] == 13 && bytes[i + 3] == 10) //CRLF's
-                    {
-                        i += 4;
+                byte[] body = new byte[bytes.length - bodyIndex];
 
-                        byte[] body = new byte[bytes.length - i];
+                System.arraycopy(bytes, bodyIndex, body, 0, body.length);
 
-                        System.arraycopy(bytes, i, body, 0, body.length);
+                FileOutputStream fos = new FileOutputStream(chunckFile);
 
-                        FileOutputStream fos = new FileOutputStream(chunckFile);
+                fos.write(body);
+                fos.close();
 
-                        fos.write(body);
-                        fos.close();
+                String key = fileId + "-" + chunckNo;
 
-                        String key = fileId + "-" + chunckNo;
+                backedUpChuncks.put(key, new int[] { Integer.parseInt(replication), bytes.length - bodyIndex});
 
-                        backedUpChuncks.put(key, new int[] {Integer.parseInt(replication), 
-                            bytes.length - i});
+                ArrayList<Integer> chunckLocation = chuncksStorage.get(key);
 
-                        ArrayList<Integer> chunckLocation = chuncksStorage.get(key);
+                if (chunckLocation == null)
+                    chunckLocation = new ArrayList<Integer>();
 
-                        if(chunckLocation == null)
-                            chunckLocation = new ArrayList<Integer>();
-                        
-                        chunckLocation.add(id);
-                        
-                        chuncksStorage.put(fileId + "-" + chunckNo, chunckLocation);
+                chunckLocation.add(id);
 
-                        sendStored(fileId, chunckNo);
-                        saveTableToDisk(1);
-                        saveTableToDisk(2);
-                    }
+                chuncksStorage.put(fileId + "-" + chunckNo, chunckLocation);
+
+                sendStored(fileId, chunckNo);
+                saveTableToDisk(1);
+                saveTableToDisk(2);
+                
             }
             else
                 if(backedUpChuncks.get(fileId + "-" + chunckNo) != null)
@@ -89,6 +95,23 @@ public class PutChunck extends Peer
             System.out.println("Couldn't write chunck into file");
             return;
         }
+    }
+
+    public int getBodyIndex(byte[] message)
+    {
+        int i;
+
+        for(i = 0; i < bytes.length - 4; i++)
+            if(bytes[i] == 13 && bytes[i + 1] == 10 && bytes[i + 2] == 13 && bytes[i + 3] == 10) //CRLF's
+            {
+                i += 4;
+                break;
+            }    
+
+        if(i == 0)
+            return -1;
+        else
+            return i;
     }
 
     public void sendStored(String fileId, String chunckNo)

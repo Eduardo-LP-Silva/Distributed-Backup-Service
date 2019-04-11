@@ -6,7 +6,6 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import app.Peer;
 import protocol.handler.PutChunck;
-import protocol.handler.Stored;
 
 public class MDB extends Peer
 {

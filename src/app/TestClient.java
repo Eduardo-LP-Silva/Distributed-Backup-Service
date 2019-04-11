@@ -11,7 +11,7 @@ public class TestClient
 
     public static void main(String args[])
     {
-        if(args.length < 3)
+        if(args.length < 2)
         {
             System.out.println("Wrong number of arguments\n Usage: TestClient <peer_ap> <operation> <opnd_1> [<opnd_2>]");
             return;
@@ -52,6 +52,13 @@ public class TestClient
 
             case "RESTORE":
 
+                if (args.length < 3)
+                {
+                    System.out.println("Wrong number of arguments\n");
+                    System.out.println("Usage: TestClient <peer_ap> <operation> <opnd_1> <opnd_2>");
+                    return;
+                }
+
                 try
                 {
                     peer.restoreFile(args[2]);
@@ -67,6 +74,14 @@ public class TestClient
                 break;
 
             case "DELETE":
+
+                if (args.length < 3)
+                {
+                    System.out.println("Wrong number of arguments\n");
+                    System.out.println("Usage: TestClient <peer_ap> <operation> <opnd_1> <opnd_2>");
+                    return;
+                }
+
                 try
                 {
                     peer.deleteFile(args[2]);
@@ -82,6 +97,14 @@ public class TestClient
                 break;
 
             case "RECLAIM":
+
+                if (args.length < 3)
+                {
+                    System.out.println("Wrong number of arguments\n");
+                    System.out.println("Usage: TestClient <peer_ap> <operation> <opnd_1> <opnd_2>");
+                    return;
+                }
+
                 manageStorage(Integer.parseInt(args[2]));
                 break;
 
@@ -118,8 +141,6 @@ public class TestClient
             return;
         }
 
-        //TODO Smt
-
         try
         {
             peer.restoreFile(path);
@@ -140,8 +161,6 @@ public class TestClient
             return;
         }
 
-        //TODO Smt
-
         try
         {
             peer.deleteFile(path);
@@ -160,11 +179,9 @@ public class TestClient
             return;
         }
 
-        //TODO Smt
-
         try
         {
-            peer.manageStorage();
+            peer.manageStorage(maxStorage);
         }
         catch(RemoteException e)
         {
@@ -174,11 +191,11 @@ public class TestClient
 
     public static void getInfo()
     {
-        //TODO Smt
-
         try
         {
-            peer.retrieveInfo();
+           String info = peer.retrieveInfo();
+
+           System.out.println(info);
         }
         catch(RemoteException e)
         {
