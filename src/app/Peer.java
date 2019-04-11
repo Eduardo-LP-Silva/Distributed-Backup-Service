@@ -43,6 +43,7 @@ public class Peer extends Thread implements BackupService
     protected static String version;
     protected static ConcurrentHashMap<String, int[]> backedUpChuncks; //fileID-ChunckNo -> {replication_expected, size}
     protected static ConcurrentHashMap<String, ArrayList<Integer>> chuncksStorage; //fileID-ChunckNo -> {1, 2, ...}
+    protected static ConcurrentHashMap<String, String[]> backUpRecordsTable; //filePath -> {fileIdD, expected_replication, n_chuncks}
 
     public static void main(String args[])
     {
@@ -142,25 +143,32 @@ public class Peer extends Thread implements BackupService
         {
             ObjectOutputStream oos = null;
 
-            if(table == 1)
+            switch(table)
             {
-                fos = new FileOutputStream("database/" + id + "/backedChuncks.ser");
-                oos = new ObjectOutputStream(fos);
-                oos.writeObject(backedUpChuncks);
-            }    
-            else
-                if(table == 2)
-                {
+                case 1:
+                    fos = new FileOutputStream("database/" + id + "/backedChuncks.ser");
+                    oos = new ObjectOutputStream(fos);
+                    oos.writeObject(backedUpChuncks);
+                    break;
+
+                case 2:
                     fos = new FileOutputStream("database/" + id + "/chuncksStorage.ser");
                     oos = new ObjectOutputStream(fos);
                     oos.writeObject(chuncksStorage);
-                }
-                else
-                {
+                    break;
+
+                case 3:
+                    fos = new FileOutputStream("database/" + id + "/backupRecords.ser");
+                    oos = new ObjectOutputStream(fos);
+                    oos.writeObject(backUpRecordsTable);
+                    break;
+
+                default:
                     System.out.println("Invalid table to save to disk");
                     return;
-                }
+            }
 
+            
             oos.close();
             fos.close();
         }
@@ -225,6 +233,30 @@ public class Peer extends Thread implements BackupService
         }
 
         System.out.println("\n");
+    }
+
+    public static void printBackupRecordsTable()
+    {
+        Set<String> keys = backUpRecordsTable.keySet();
+
+        System.out.println("--- Backup Records ---");
+
+        for(String key: keys)
+        {
+            String[] values = backUpRecordsTable.get(key);
+
+            System.out.print(key + "-> [");
+
+            for(int i = 0; i < values.length; i++)
+            {
+                System.out.print(values[i]);
+
+                if(i != values.length - 1)
+                    System.out.print(", ");
+            }
+
+            System.out.println("]");
+        }
     }
 
     public static void createDirectory()
@@ -296,6 +328,36 @@ public class Peer extends Thread implements BackupService
 
             Peer.setChuncksStorageTable(new ConcurrentHashMap<String, ArrayList<Integer>>());
             Peer.saveTableToDisk(2);
+        }
+
+        try
+        {
+            fis = new FileInputStream("database/" + id + "/backupRecords.ser");
+
+            try
+            {
+                ObjectInputStream ois = new ObjectInputStream(fis);
+
+                Peer.setBackupRecordsTable((ConcurrentHashMap<String, String[]>) ois.readObject());
+
+                ois.close();
+                fis.close();
+            }
+            catch(IOException e)
+            {
+                System.out.println("Couldn't deserialize backed up records file");
+            }
+            catch(ClassNotFoundException e)
+            {
+                System.out.println("Object serialized doesn't correspond to expected class");
+            }
+        }
+        catch(FileNotFoundException e)
+        {
+            System.out.println("Couldn't find previous backup up records database file, generating new one...");
+
+            Peer.setBackupRecordsTable(new ConcurrentHashMap<String, String[]>());
+            Peer.saveTableToDisk(3);
         }
 
     }
@@ -372,9 +434,75 @@ public class Peer extends Thread implements BackupService
         reclaim.start();
     }
 
-    public void retrieveInfo()
+    public String retrieveInfo()
     {
-        //TODO Get info
+        String info;
+
+        info = "--- Initiated Backup Records ---\n\n";
+
+        Set<String> keys = backUpRecordsTable.keySet();
+        String[] backUpDetails;
+        String externalStorageKey;
+        ArrayList<Integer> externalStorage;
+
+        for(String filePath: keys)
+        {
+            info += "File: " + filePath + "\n";
+
+            backUpDetails = backUpRecordsTable.get(filePath);
+
+            if(backUpDetails.length != 3)
+            {
+                info += "Invalid back up record\n";
+                continue;
+            }
+
+            info += "File ID: " + backUpDetails[0] + "\n";
+            info += "Desired Replication: " + backUpDetails[1] + "\n";
+            info += "Number of Chuncks: " + backUpDetails[2] + "\n\n";
+
+            for(int i = 0; i < Integer.parseInt(backUpDetails[2]); i++)
+            {
+                externalStorageKey = backUpDetails[0] + "-" + i;
+                externalStorage = chuncksStorage.get(externalStorageKey);
+
+                if(externalStorage != null)
+                    info += "Chunck " + i + " replication: " + externalStorage.size() + "\n";
+            }
+        }
+
+        info += "\n--- Local Chuncks---\n\n";
+
+        keys = backedUpChuncks.keySet();
+
+        String[] chunckParams;
+        int replication;
+
+        for(String localChunckKey: keys)
+        {
+            chunckParams = localChunckKey.split("-");
+
+            info += "Chunck " + chunckParams[1] + " of file with ID "+ chunckParams[0] + ":\n";
+            info += "\tSize: " + backedUpChuncks.get(localChunckKey)[1] / 1000 + "kB\n";
+
+            externalStorage = chuncksStorage.get(localChunckKey);
+
+            if(externalStorage != null)
+                replication = externalStorage.size();
+            else
+                replication = 0;
+
+            info += "\tReplication: " + replication + "\n";
+        }
+
+        info += "\n--- Storage Details ---\n\n";
+
+        int spaceOccupied = getFolderSize(new File("database/" + id + "/backup"));
+
+        info += "Storage Capacity: " + diskSpace / 1000 + "kB\n";
+        info += "Occupied space: " + spaceOccupied / 1000 + "kB\n";
+
+        return info;
     }
 
     public static void setVersion(String version)
@@ -395,6 +523,11 @@ public class Peer extends Thread implements BackupService
     public static void setChuncksStorageTable(ConcurrentHashMap<String, ArrayList<Integer>> newTable)
     {
         chuncksStorage = newTable;
+    }
+
+    public static void setBackupRecordsTable(ConcurrentHashMap<String, String[]> newTable)
+    {
+        backUpRecordsTable = newTable;
     }
 
     public static ConcurrentHashMap<String, int[]> getLocalChuncksTable()

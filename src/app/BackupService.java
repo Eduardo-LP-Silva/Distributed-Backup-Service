@@ -9,5 +9,5 @@ public interface BackupService extends Remote
     public void restoreFile(String path) throws RemoteException;
     public void deleteFile(String path) throws RemoteException;
     public void manageStorage(int maxSpace) throws RemoteException;
-    public void retrieveInfo() throws RemoteException;
+    public String retrieveInfo() throws RemoteException;
 }
