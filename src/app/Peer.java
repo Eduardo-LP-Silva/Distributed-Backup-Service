@@ -429,7 +429,6 @@ public class Peer extends Thread implements BackupService
 
     public void manageStorage(int maxSpace)
     {
-        diskSpace = maxSpace;
         Reclaim reclaim = new Reclaim(maxSpace);
         reclaim.start();
     }

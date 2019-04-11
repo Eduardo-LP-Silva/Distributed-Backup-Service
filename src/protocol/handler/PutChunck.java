@@ -43,7 +43,9 @@ public class PutChunck extends Peer
             return;
         }
 
-        if (bytes.length - bodyIndex > diskSpace)
+        int chunckSize = bytes.length - bodyIndex;
+
+        if (getFolderSize(new File("database/" + id + "/backup")) + chunckSize > diskSpace)
             return;
 
         String fileId = msgParams[3], chunckNo = msgParams[4], replication = msgParams[5],

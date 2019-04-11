@@ -9,11 +9,9 @@ import java.net.DatagramPacket;
 
 public class Reclaim extends Peer
 {
-    private int maxSpace;
-
     public Reclaim(int maxSpace)
     {
-        this.maxSpace = maxSpace;
+        Peer.diskSpace = maxSpace;
     }
 
     @Override
@@ -24,10 +22,10 @@ public class Reclaim extends Peer
         int spaceReleased = 0, spaceOccupied;
         ArrayList<Integer> replications;
 
-        if((spaceOccupied = (int) getFolderSize(backupFolder)) <= maxSpace)
+        if((spaceOccupied = (int) getFolderSize(backupFolder)) <= diskSpace)
             return;
         
-        if(maxSpace != 0)
+        if(diskSpace != 0)
             for(String localChunck: keys)
             {
                 if((replications = chuncksStorage.get(localChunck)) != null)
@@ -36,7 +34,7 @@ public class Reclaim extends Peer
                         spaceReleased += backedUpChuncks.get(localChunck)[1];
                         sendRemoved(localChunck);
                     
-                        if(spaceOccupied - spaceReleased <= maxSpace)
+                        if(spaceOccupied - spaceReleased <= diskSpace)
                         {
                             cleanEmptyFolders();
                             return;
@@ -50,7 +48,7 @@ public class Reclaim extends Peer
             spaceReleased += backedUpChuncks.get(localChunck)[1];
             sendRemoved(localChunck);
 
-            if(spaceOccupied - spaceReleased <= maxSpace)
+            if(spaceOccupied - spaceReleased <= diskSpace)
             {
                 cleanEmptyFolders();
                 return;
