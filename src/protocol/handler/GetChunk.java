@@ -21,7 +21,6 @@ public class GetChunk extends Peer
 
     public GetChunk(String[] msgParams)
     {
-        super();
         this.msgParams = msgParams;
     }
 
@@ -35,11 +34,6 @@ public class GetChunk extends Peer
         {
             System.out.println("Invalid GETCHUNK message");
             return;
-        }
-
-        System.out.println("GetChunk Message Params");
-        for (int i = 0; i < msgParams.length; i++){
-          System.out.println(msgParams[i]);
         }
 
         String path = "database/" + id + "/backup/" + msgParams[3] + "/chk" + msgParams[4];

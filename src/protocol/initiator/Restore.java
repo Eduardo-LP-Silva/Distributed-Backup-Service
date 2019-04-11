@@ -40,6 +40,13 @@ public class Restore extends Peer
         if(fileSize % 64000 == 0)
             nChuncks += 1;
 
+        try (FileOutputStream output = new FileOutputStream("database/" + id + "/restored/" + trimPath(path))) {
+          output.close();
+        }
+        catch(IOException e){
+          System.out.println(e);
+        }
+
 
         try(FileInputStream fis = new FileInputStream(file); BufferedInputStream bis = new BufferedInputStream(fis);)
         {
@@ -59,7 +66,7 @@ public class Restore extends Peer
                 bytesRead += bis.read(buffer);
 
                 if(!sendGetChunk(fileId, buffer, partCounter)){
-                  System.out.println("Falhou no snedGetChunk");
+                  System.out.println("Falhou no sendGetChunk");
                   return;
                 }
 
@@ -139,12 +146,7 @@ public class Restore extends Peer
                     String version = msgParams[1], fileIdReceived = msgParams[3], chunckNoReceived = msgParams[4];
                     if(version.equals(Peer.version) && fileIdReceived.equals(fileId) && Integer.parseInt(chunckNoReceived) == chunckNo){
                         boolean flag = false;
-                        for (int i = 0; i < actualData.length; i++){
-                          if (i == 0){
-                            FileOutputStream writer = new FileOutputStream("database/" + id + "/restored/" + trimPath(path));
-                            writer.write(("").getBytes());
-                            writer.close();
-                          }
+                        for (int i = 5; i < actualData.length; i++){
                           try (FileOutputStream output = new FileOutputStream("database/" + id + "/restored/" + trimPath(path), true)) {
                             if(actualData[i] == 13 && actualData[i + 1] == 10 && actualData[i + 2] == 13 && actualData[i + 3] == 10){
                                 i +=4;

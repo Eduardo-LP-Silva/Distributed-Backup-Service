@@ -57,26 +57,13 @@ public class Delete extends Peer
 
                 if(!sendDelete(fileId, buffer, partCounter))
                     return;
-
-                // while(attemptNo <= 5)
-                // {
-                //     if(receiveStored(responseWaitingTime, replication, fileId, partCounter))
-                //         break;
-                //     else
-                //     {
-                //         responseWaitingTime *= 2;
-                //         attemptNo++;
-                //     }
-                // }
-                //
-                // if(attemptNo > 5)
-                //     System.out.println("Max attempts to send PUTCHUNCK reached\nChunck not stored with required replication");
             }
         }
         catch(Exception e)
         {
             System.out.println("Couldn't separate file into chunks");
         }
+        file.delete();
     }
 
 

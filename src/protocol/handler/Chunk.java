@@ -32,17 +32,6 @@ public class Chunk extends Peer
             System.out.println("Invalid CHUNK message");
             return;
         }
-
-        // if(msgParams[2].equals("" + id)) //Peer that initiated backup cannot store chuncks
-        //     return;
-        //
-        // String fileId = msgParams[3], chunckNo = msgParams[4], replication = msgParams[5],
-        //     path = id + "/backup/" + fileId;
-        //
-        // new File(path).mkdirs();
-        //
-        // File chunckFile = new File(path + "/chk" + chunckNo);
-
     }
 
 }

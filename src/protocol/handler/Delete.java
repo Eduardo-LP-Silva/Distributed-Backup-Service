@@ -32,21 +32,21 @@ public class Delete extends Peer
             return;
         }
 
-        System.out.println("Message Params");
-        for (int i = 0; i < msgParams.length; i++){
-          System.out.println(msgParams[i]);
+        String path = "database/" + id + "/backup/" + msgParams[3] + "/chk" + msgParams[4];
+        File file = new File(path);
+
+        if (Integer.parseInt(msgParams[2]) == id){
+          if(!file.exists())
+          {
+              System.out.println("Couldn't find chunk to delete: " + path);
+          }
+          else{
+            System.out.println("File deleted: " + path);
+            file.delete();
+          }
         }
-
-        // if(msgParams[2].equals("" + id)) //Peer that initiated backup cannot store chuncks
-        //     return;
-        //
-        // String fileId = msgParams[3], chunckNo = msgParams[4], replication = msgParams[5],
-        //     path = id + "/backup/" + fileId;
-        //
-        // new File(path).mkdirs();
-        //
-        // File chunckFile = new File(path + "/chk" + chunckNo);
-
+        File folder = new File("database/" + id + "/backup/" + msgParams[3]);
+        folder.delete();
     }
 
 }
