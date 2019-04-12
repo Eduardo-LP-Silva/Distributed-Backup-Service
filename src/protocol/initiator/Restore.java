@@ -1,15 +1,12 @@
 package protocol.initiator;
 import java.io.FileOutputStream;
-import java.io.BufferedInputStream;
 import java.io.File;
-import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.net.MulticastSocket;
 import java.net.DatagramPacket;
 import java.io.IOException;
 import java.net.SocketTimeoutException;
 import app.Peer;
-import java.io.BufferedWriter;
-import java.io.FileWriter;
 
 public class Restore extends Peer
 {
@@ -34,67 +31,58 @@ public class Restore extends Peer
         String fileId = generateFileId(file);
         int fileSize = (int) file.length();
         int partCounter,  nChuncks = (int) Math.ceil((double) fileSize / 64000);
-        int responseWaitingTime = 1 * 1000;
-        int attemptNo = 1;
 
         if(fileSize % 64000 == 0)
             nChuncks += 1;
 
-        try (FileOutputStream output = new FileOutputStream("database/" + id + "/restored/" + trimPath(path))) {
-          output.close();
-        }
-        catch(IOException e){
-          System.out.println(e);
-        }
+        File restoredFile = new File("database/" + id + "/restored/" + file.getName());
 
+        if(restoredFile.exists())
+            restoredFile.delete();
 
-        try(FileInputStream fis = new FileInputStream(file); BufferedInputStream bis = new BufferedInputStream(fis);)
+        FileOutputStream output;
+
+        try
         {
-            int bytesRead = 0;
-
-            for(partCounter = 0; partCounter < nChuncks; partCounter++)
-            {
-                int aux = (int) file.length() - bytesRead, bufferSize;
-
-                if (aux > 64000)
-                    bufferSize = 64000; //Maximum chunck size
-                else
-                    bufferSize = aux;
-
-                byte[] buffer = new byte[bufferSize];
-
-                bytesRead += bis.read(buffer);
-
-                if(!sendGetChunk(fileId, buffer, partCounter)){
-                  System.out.println("Falhou no sendGetChunk");
-                  return;
-                }
-
-                while(attemptNo <= 5)
-                {
-                    if(receiveChunk(responseWaitingTime, fileId, partCounter, buffer))
-                        break;
-                    else
-                    {
-                        responseWaitingTime *= 2;
-                        attemptNo++;
-                    }
-                }
-
-                if(attemptNo > 5)
-                    System.out.println("Max attempts to send GETCHUNK reached. File not restored");
-            }
+            restoredFile.createNewFile();
         }
-        catch(Exception e)
+        catch(IOException e)
         {
-            System.out.println("Couldn't separate file into chunks");
+            System.out.println("Couldn't create restored file");
+            return;
         }
 
-        System.out.println("NUMERO DE CHUNKS");
-        System.out.println(nChuncks);
+        try
+        {
+            output = new FileOutputStream(restoredFile, true);
+        }
+        catch(FileNotFoundException e)
+        {
+            System.out.println("Couldn't open restored file");
+            return;
+        }
+
+        for (partCounter = 0; partCounter < nChuncks; partCounter++) 
+        {
+            if(!sendGetChunk(fileId, partCounter)) 
+                break;
+
+            if(!receiveChunk(fileId, partCounter, output))
+                break;
+        }
+
+        try
+        {
+            output.close();
+        }
+        catch(IOException e)
+        {
+            System.out.println("Couldn't close restored file");
+        }
+        
     }
 
-    public boolean receiveChunk(int timeout, String fileId, int chunckNo, byte[] chunk)
+    public boolean receiveChunk(String fileId, int chunckNo, FileOutputStream output)
     {
         byte[] buffer = new byte[64100];
         DatagramPacket receivedPacket = new DatagramPacket(buffer, buffer.length);
@@ -106,7 +94,7 @@ public class Restore extends Peer
 
             mdrSocket.joinGroup(mdrAddr);
             mdrSocket.setTimeToLive(1);
-            mdrSocket.setSoTimeout(timeout);
+            mdrSocket.setSoTimeout(8 * 1000);
         }
         catch(IOException e)
         {
@@ -116,52 +104,51 @@ public class Restore extends Peer
 
         try
         {
-              mdrSocket.receive(receivedPacket);
+            while(true)
+            {
+                mdrSocket.receive(receivedPacket);
 
-              byte[] actualData = new byte[receivedPacket.getLength()];
-
-              System.arraycopy(receivedPacket.getData(), 0, actualData, 0, actualData.length);
-
-              String msg = new String(actualData).trim();
-
-              String[] msgParams = msg.split("\\s+");
-
-              if(msgParams.length == 0)
-              {
-                  System.out.println("Corrupt message @ peer.receiveChunk");
-              }
-
-              for(int i = 0; i < msgParams.length; i++)
-                  msgParams[i] = msgParams[i].trim();
-
-              if(msgParams[0].equals("CHUNK"))
-              {
-                System.out.println(msgParams[0]);
-                System.out.println(msgParams[4]);
-                  if(msgParams.length < 6)
+                byte[] actualData = new byte[receivedPacket.getLength()];
+  
+                System.arraycopy(receivedPacket.getData(), 0, actualData, 0, actualData.length);
+  
+                String msg = new String(actualData).trim();
+  
+                String[] msgParams = msg.split("\\s+");
+  
+                if(msgParams.length == 0)
+                {
+                    System.out.println("Corrupt message @ peer.receiveChunk");
+                }
+  
+                for(int i = 0; i < msgParams.length; i++)
+                    msgParams[i] = msgParams[i].trim();
+  
+                if(msgParams[0].equals("CHUNK"))
+                {
+                  if (msgParams.length < 6) 
                   {
                       System.out.println("Invalid CHUNK message");
+                  } 
+                  else 
+                  {
+                      String fileIdReceived = msgParams[3], chunckNoReceived = msgParams[4];
+  
+                      if (!checkVersion(msgParams[1]) || !fileIdReceived.equals(fileId)
+                              || Integer.parseInt(chunckNoReceived) != chunckNo) 
+                        continue;
+  
+                      int bodyIndex = getMessageBodyIndex(actualData);
+  
+                      if(bodyIndex == -1)
+                        continue;
+  
+                      output.write(actualData, bodyIndex, actualData.length - bodyIndex);
+                      break;
                   }
-                  else{
-                    String version = msgParams[1], fileIdReceived = msgParams[3], chunckNoReceived = msgParams[4];
-                    if(version.equals(Peer.version) && fileIdReceived.equals(fileId) && Integer.parseInt(chunckNoReceived) == chunckNo){
-                        boolean flag = false;
-                        for (int i = 5; i < actualData.length; i++){
-                          try (FileOutputStream output = new FileOutputStream("database/" + id + "/restored/" + trimPath(path), true)) {
-                            if(actualData[i] == 13 && actualData[i + 1] == 10 && actualData[i + 2] == 13 && actualData[i + 3] == 10){
-                                i +=4;
-                                flag = true;
-                              }
-                              if (flag == true){
-                                output.write(actualData[i]);
-                              }
-                          }
-                        }
-                      }
-                    }
-                  }
-
-          }
+                }
+            }
+        }
         catch(Exception e)
         {
             if(e instanceof SocketTimeoutException)
@@ -174,22 +161,17 @@ public class Restore extends Peer
         }
 
         mdrSocket.close();
-
         return true;
     }
 
-    public boolean sendGetChunk(String fileId, byte[] chunk, int chunkNo)
+    public boolean sendGetChunk(String fileId, int chunkNo)
     {
-        String msg = "GETCHUNK " + version + " " + id + " " + fileId + " " + chunkNo + " " + " \r\n\r\n";
-
-        byte[] header = msg.getBytes();
-        byte[] getchunk = new byte[header.length];
-
-        System.arraycopy(header, 0, getchunk, 0, header.length);
+        String msg = "GETCHUNK " + version + " " + id + " " + fileId + " " + chunkNo + " \r\n\r\n";
+        byte[] getChunck = msg.getBytes();
 
         try
         {
-            DatagramPacket packet = new DatagramPacket(getchunk, getchunk.length, mdrAddr, mdrPort);
+            DatagramPacket packet = new DatagramPacket(getChunck, getChunck.length, mcAddr, mcPort);
             restoreSocket.send(packet);
         }
         catch(Exception e)
@@ -200,7 +182,8 @@ public class Restore extends Peer
         return true;
     }
 
-    public String trimPath(String path){
+    public String trimPath(String path)
+    {
       return path.substring(6);
     }
 }

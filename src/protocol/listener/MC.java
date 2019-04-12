@@ -8,6 +8,7 @@ import app.Peer;
 import protocol.handler.Delete;
 import protocol.handler.Removed;
 import protocol.handler.Stored;
+import protocol.handler.GetChunk;
 
 public class MC extends Peer
 {
@@ -76,6 +77,11 @@ public class MC extends Peer
                     case "REMOVED":
                         Removed removed = new Removed(msgParams);
                         removed.start();
+                        break;
+
+                    case "GETCHUNK":
+                        GetChunk gc = new GetChunk(msgParams);
+                        gc.start();
                         break;
 
                     default:

@@ -101,8 +101,6 @@ public class Peer extends Thread implements BackupService
         }
 
         generateDataBase();
-        printLocalChuncksTable();
-        printChuncksStorageTable();
         setUpClientInterface();
 
         try
@@ -563,5 +561,22 @@ public class Peer extends Thread implements BackupService
         }
 
         return size;
+    }
+
+    public static int getMessageBodyIndex(byte[] bytes)
+    {
+        int i;
+
+        for(i = 0; i < bytes.length - 4; i++)
+            if(bytes[i] == 13 && bytes[i + 1] == 10 && bytes[i + 2] == 13 && bytes[i + 3] == 10) //CRLF's
+            {
+                i += 4;
+                break;
+            }    
+
+        if(i == 0)
+            return -1;
+        else
+            return i;
     }
 }

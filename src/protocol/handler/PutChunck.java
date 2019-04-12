@@ -35,7 +35,7 @@ public class PutChunck extends Peer
         if(msgParams[2].equals("" + id)) //Peer that initiated backup cannot store chuncks
             return;
 
-        int bodyIndex = getBodyIndex(bytes);
+        int bodyIndex = getMessageBodyIndex(bytes);
 
         if(bodyIndex == -1)
         {
@@ -84,7 +84,6 @@ public class PutChunck extends Peer
                 sendStored(fileId, chunckNo);
                 saveTableToDisk(1);
                 saveTableToDisk(2);
-                
             }
             else
                 if(backedUpChuncks.get(fileId + "-" + chunckNo) != null)
@@ -95,23 +94,6 @@ public class PutChunck extends Peer
             System.out.println("Couldn't write chunck into file");
             return;
         }
-    }
-
-    public int getBodyIndex(byte[] message)
-    {
-        int i;
-
-        for(i = 0; i < bytes.length - 4; i++)
-            if(bytes[i] == 13 && bytes[i + 1] == 10 && bytes[i + 2] == 13 && bytes[i + 3] == 10) //CRLF's
-            {
-                i += 4;
-                break;
-            }    
-
-        if(i == 0)
-            return -1;
-        else
-            return i;
     }
 
     public void sendStored(String fileId, String chunckNo)

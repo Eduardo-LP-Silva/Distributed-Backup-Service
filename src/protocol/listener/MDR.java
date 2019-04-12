@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import app.Peer;
-import protocol.handler.GetChunk;
 import protocol.handler.Chunk;
 
 public class MDR extends Peer
@@ -62,11 +61,6 @@ public class MDR extends Peer
 
                 switch(msgParams[0])
                 {
-                    case "GETCHUNK":
-                        GetChunk gc = new GetChunk(msgParams);
-                        gc.start();
-                        break;
-
                     case "CHUNK":
                         Chunk chunk = new Chunk(msgParams, actualData);
                         chunk.start();
