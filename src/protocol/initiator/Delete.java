@@ -3,6 +3,7 @@ package protocol.initiator;
 import java.io.File;
 import java.net.DatagramPacket;
 import java.util.concurrent.TimeUnit;
+import java.util.Set;
 
 import app.Peer;
 
@@ -26,7 +27,7 @@ public class Delete extends Peer
             return;
         }
 
-        String fileId = generateFileId(file), chunckKey;
+        String fileId = generateFileId(file);
 
         for(int i = 0; i < 5; i++)
         {
@@ -44,12 +45,12 @@ public class Delete extends Peer
             
         }
         
-        for(int i = 0; true; i++)
+        Set<String> keys = chuncksStorage.keySet();
+        
+        for(String key: keys)
         {
-            chunckKey = fileId + "-" + i;
-
-            if(chuncksStorage.get(chunckKey) != null)
-                chuncksStorage.remove(chunckKey);
+            if(key.substring(0, 64).equals(fileId))
+                chuncksStorage.remove(key);
             else
                 break;
         }

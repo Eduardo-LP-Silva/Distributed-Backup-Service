@@ -101,6 +101,8 @@ public class Peer extends Thread implements BackupService
         }
 
         generateDataBase();
+        printLocalChuncksTable();
+        printChuncksStorageTable();
         setUpClientInterface();
 
         try
