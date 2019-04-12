@@ -116,7 +116,7 @@ public class Backup extends Peer
             return;
         }
 
-        int responseWaitingTime = 1 * 1000;
+        int responseWaitingTime;
         int attemptNo = 1;
         int chunckSize = (int) chunck.length();
         String fileId = chunck.getParentFile().getName();
@@ -125,6 +125,8 @@ public class Backup extends Peer
         try(FileInputStream fis = new FileInputStream(chunck); BufferedInputStream bis = new BufferedInputStream(fis);)
         {
             byte[] buffer = new byte[chunckSize];
+            
+            responseWaitingTime = 1 * 1000;
 
             if (!sendPutChunck(fileId, buffer, chunckNo, replication))
                 return;
@@ -214,7 +216,7 @@ public class Backup extends Peer
         catch(Exception e)
         {
             if(e instanceof SocketTimeoutException)
-                System.out.println("Didn't received required PUT answers to meet replication demands");
+                System.out.println("Didn't received required STORED answers to meet replication demands");
             else
                 System.out.println("Couldn't received PUT");
 

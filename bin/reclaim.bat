@@ -1,1 +1,0 @@
-java app.TestClient bs2 RECLAIM 0  

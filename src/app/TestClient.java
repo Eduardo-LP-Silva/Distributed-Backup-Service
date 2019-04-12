@@ -17,7 +17,8 @@ public class TestClient
             return;
         }
 
-        connectToBackupService(args[0]);
+        if(!connectToBackupService(args[0]))
+            return;
 
         switch (args[1])
         {
@@ -118,7 +119,7 @@ public class TestClient
         }
     }
 
-    public static void connectToBackupService(String remoteObject)
+    public static boolean connectToBackupService(String remoteObject)
     {
         try
         {
