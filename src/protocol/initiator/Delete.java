@@ -1,12 +1,9 @@
 package protocol.initiator;
 
-import java.io.BufferedInputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.net.MulticastSocket;
 import java.net.DatagramPacket;
-import java.io.IOException;
-import java.net.SocketTimeoutException;
+import java.util.concurrent.TimeUnit;
+
 import app.Peer;
 
 public class Delete extends Peer
@@ -29,57 +26,49 @@ public class Delete extends Peer
             return;
         }
 
-        String fileId = generateFileId(file);
-        int fileSize = (int) file.length();
-        int partCounter,  nChuncks = (int) Math.ceil((double) fileSize / 64000);
-        int responseWaitingTime = 1 * 1000;
-        int attemptNo = 1;
+        String fileId = generateFileId(file), chunckKey;
 
-        if(fileSize % 64000 == 0)
-            nChuncks += 1;
-
-        try(FileInputStream fis = new FileInputStream(file); BufferedInputStream bis = new BufferedInputStream(fis);)
+        for(int i = 0; i < 5; i++)
         {
-            int bytesRead = 0;
+            if(!sendDelete(fileId))
+                return;
 
-            for(partCounter = 0; partCounter < nChuncks; partCounter++)
+            try
             {
-                int aux = (int) file.length() - bytesRead, bufferSize;
-
-                if (aux > 64000)
-                    bufferSize = 64000; //Maximum chunck size
-                else
-                    bufferSize = aux;
-
-                byte[] buffer = new byte[bufferSize];
-
-                bytesRead += bis.read(buffer);
-
-                if(!sendDelete(fileId, buffer, partCounter))
-                    return;
+                TimeUnit.SECONDS.sleep(1);
             }
+            catch(InterruptedException e)
+            {
+                System.out.println("Couldn't sleep in between DELETE messages sending");
+            }
+            
         }
-        catch(Exception e)
+        
+        for(int i = 0; true; i++)
         {
-            System.out.println("Couldn't separate file into chunks");
+            chunckKey = fileId + "-" + i;
+
+            if(chuncksStorage.get(chunckKey) != null)
+                chuncksStorage.remove(chunckKey);
+            else
+                break;
         }
+        
+        saveTableToDisk(2);
         file.delete();
     }
 
 
-    public boolean sendDelete(String fileId, byte[] chunk, int chunkNo)
+    public boolean sendDelete(String fileId)
     {
-        String msg = "DELETE " + version + " " + id + " " + fileId + " " + chunkNo + " " + " \r\n\r\n";
+        String msg = "DELETE " + version + " " + id + " " + fileId + " \r\n\r\n";
 
-        byte[] header = msg.getBytes();
-        byte[] delete = new byte[header.length];
-
-        System.arraycopy(header, 0, delete, 0, header.length);
+        byte[] msgBytes = msg.getBytes();
 
         try
         {
-            DatagramPacket packet = new DatagramPacket(delete, delete.length, mcAddr, mcPort);
-            deleteSocket.send(packet);
+            DatagramPacket packet = new DatagramPacket(msgBytes, msgBytes.length, mcAddr, mcPort);
+            controlSocket.send(packet);
         }
         catch(Exception e)
         {

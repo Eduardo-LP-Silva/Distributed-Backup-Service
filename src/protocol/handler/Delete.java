@@ -1,22 +1,15 @@
 package protocol.handler;
 
-import java.util.Random;
-import java.util.concurrent.TimeUnit;
-import java.net.DatagramPacket;
-import java.io.IOException;
-import java.util.ArrayList;
 import java.io.File;
-import java.io.FileOutputStream;
+
 import app.Peer;
 
 public class Delete extends Peer
 {
     private String[] msgParams;
-    byte[] bytes;
 
     public Delete(String[] msgParams)
     {
-        super();
         this.msgParams = msgParams;
     }
 
@@ -32,21 +25,27 @@ public class Delete extends Peer
             return;
         }
 
-        String path = "database/" + id + "/backup/" + msgParams[3] + "/chk" + msgParams[4];
-        File file = new File(path);
+        String fileId = msgParams[3], path = "database/" + id + "/backup/" + fileId, chunckNo, chunckKey;
+        File chuncksFolder = new File(path);
 
-        if (Integer.parseInt(msgParams[2]) == id){
-          if(!file.exists())
-          {
-              System.out.println("Couldn't find chunk to delete: " + path);
-          }
-          else{
-            System.out.println("File deleted: " + path);
-            file.delete();
-          }
+        if(chuncksFolder.isDirectory())
+        {
+            for(File chunck: chuncksFolder.listFiles())
+            {
+                chunckNo = chunck.getName().substring(3); 
+                chunckKey = fileId + "-" + chunckNo;
+
+                chunck.delete();
+                backedUpChuncks.remove(chunckKey);
+                chuncksStorage.remove(chunckKey);
+                                   
+            }
+
+            saveTableToDisk(1);
+            saveTableToDisk(2); 
         }
-        File folder = new File("database/" + id + "/backup/" + msgParams[3]);
-        folder.delete();
+
+        chuncksFolder.delete();
     }
 
 }

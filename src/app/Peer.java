@@ -34,7 +34,6 @@ public class Peer extends Thread implements BackupService
     protected static DatagramSocket controlSocket;
     protected static DatagramSocket backupSocket;
     protected static DatagramSocket restoreSocket;
-    protected static DatagramSocket deleteSocket;
     protected static int mcPort, mdbPort, mdrPort;
     protected static InetAddress mcAddr, mdbAddr, mdrAddr;
     protected static int id;
@@ -109,7 +108,6 @@ public class Peer extends Thread implements BackupService
             controlSocket = new DatagramSocket();
             backupSocket = new DatagramSocket();
             restoreSocket = new DatagramSocket();
-            deleteSocket = new DatagramSocket();
         }
         catch(SocketException e)
         {
