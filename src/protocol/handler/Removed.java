@@ -39,7 +39,7 @@ public class Removed extends Peer
 
         if(Integer.parseInt(senderId) == id)
         {
-            System.out.println("REMOVED message received originated from same peer, ignoring...");
+            //System.out.println("REMOVED message received originated from same peer, ignoring...");
             return;
         }
             
@@ -50,7 +50,13 @@ public class Removed extends Peer
         if(chunckExternalCount != null)
         {
             chunckExternalCount.remove((Object) Integer.parseInt(senderId));
-            chuncksStorage.put(localChunckKey, chunckExternalCount);
+
+            if(chunckExternalCount.size() == 0)
+                chuncksStorage.remove(localChunckKey);
+            else
+                chuncksStorage.put(localChunckKey, chunckExternalCount);
+
+            saveTableToDisk(2);
         }
 
         if(localChunckParams != null)
@@ -118,8 +124,10 @@ public class Removed extends Peer
                         mdbSocket.close();
                         return;
                     }
-                }
 
+
+                }
+                
                 Backup backup = new Backup("database/" + id + "/backup/" + fileId + "/chk" + chunckNo, replication, false);
 
                 backup.start();

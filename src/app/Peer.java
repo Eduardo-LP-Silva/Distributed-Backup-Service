@@ -406,8 +406,11 @@ public class Peer extends Thread implements BackupService
     }
 
 
-    public void backupFile(String path, int replication)
+    public void backupFile(String path, int replication, boolean enh)
     {
+        if(enh)
+            Peer.version = "2.0";
+
         Backup backup = new Backup(path, replication, true);
         backup.start();
     }
@@ -464,6 +467,8 @@ public class Peer extends Thread implements BackupService
 
                 if(externalStorage != null)
                     info += "Chunck " + i + " replication: " + externalStorage.size() + "\n\n";
+                else
+                    info += "Chunck " + i + " replication: " + 0 + "\n\n";
             }
         }
 

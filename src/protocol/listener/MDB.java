@@ -6,6 +6,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import app.Peer;
 import protocol.handler.PutChunck;
+import protocol.handler.PutChunckEnh;
 
 public class MDB extends Peer
 {
@@ -62,8 +63,18 @@ public class MDB extends Peer
                 switch(msgParams[0])
                 {
                     case "PUTCHUNK":
-                        PutChunck pc = new PutChunck(msgParams, actualData);
-                        pc.start();
+
+                        if(Peer.version.equals("1.0"))
+                        {
+                            PutChunck pc = new PutChunck(msgParams, actualData);
+                            pc.start();
+                        }
+                        else
+                        {
+                            PutChunckEnh pce = new PutChunckEnh(msgParams, actualData);
+                            pce.start();
+                        }
+                        
                         break;
 
                     default:

@@ -8,6 +8,7 @@ import java.io.File;
 public class TestClient
 {
     private static BackupService peer;
+    private static boolean enh = false;
 
     public static void main(String args[])
     {
@@ -24,9 +25,7 @@ public class TestClient
         switch (args[1])
         {
             case "BACKUPENH":
-
-                System.out.println("Backup enhancement not implemented");
-                break;
+                enh = true;
 
             case "BACKUP":
 
@@ -39,7 +38,7 @@ public class TestClient
 
                 try
                 {
-                    peer.backupFile(args[2], Integer.parseInt(args[3]));
+                    peer.backupFile(args[2], Integer.parseInt(args[3]), enh);
                 }
                 catch(RemoteException e)
                 {

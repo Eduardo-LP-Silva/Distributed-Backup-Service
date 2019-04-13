@@ -41,7 +41,6 @@ public class Delete extends Peer
                 chunck.delete();
                 backedUpChuncks.remove(chunckKey);
                 chuncksStorage.remove(chunckKey);
-                                   
             }
 
             saveTableToDisk(1);

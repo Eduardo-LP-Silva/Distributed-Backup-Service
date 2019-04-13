@@ -90,7 +90,13 @@ public class Reclaim extends Peer
         ArrayList<Integer> chunckExternalStorage = chuncksStorage.get(localChunckKey);
         
         chunckExternalStorage.remove((Object) id);
-        chuncksStorage.put(localChunckKey, chunckExternalStorage);
+
+        if(chunckExternalStorage.size() == 0)
+            chuncksStorage.remove(localChunckKey);
+        else
+            chuncksStorage.put(localChunckKey, chunckExternalStorage);
+
+        saveTableToDisk(2);
 
         DatagramPacket packet = new DatagramPacket(msgData, msgData.length, mcAddr, mcPort);
 
