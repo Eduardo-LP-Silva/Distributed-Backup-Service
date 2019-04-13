@@ -52,7 +52,7 @@ public class MDR extends Peer
 
                 if(msgParams.length == 0)
                 {
-                    System.out.println("Corrupt message @ restore");
+                    System.out.println("Corrupt message @ MDR");
                     continue;
                 }
 
@@ -67,14 +67,14 @@ public class MDR extends Peer
                         break;
 
                     default:
-                        System.out.println("Couldn't identify message in restore: " + msgParams[0]);
+                        System.out.println("Couldn't identify message in MDR: " + msgParams[0]);
                 }
 
 
             }
             catch(IOException e)
             {
-                System.out.println("Couldn't receive packet");
+                System.out.println("Couldn't receive packet in MDR");
             }
 
         }

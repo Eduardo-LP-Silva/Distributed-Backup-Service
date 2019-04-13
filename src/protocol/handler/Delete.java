@@ -17,11 +17,14 @@ public class Delete extends Peer
     public void run()
     {
         if(!checkVersion(msgParams[1]))
+        {
+            System.out.println("Version mismatch in DELETE message: " + msgParams[1]);
             return;
-
+        }
+            
         if(msgParams.length < 4)
         {
-            System.out.println("Invalid DELETE message");
+            System.out.println("Invalid DELETE message: " + joinMessageParams(msgParams));
             return;
         }
 

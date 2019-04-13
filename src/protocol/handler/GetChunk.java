@@ -3,7 +3,6 @@ package protocol.handler;
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 import java.util.Random;
-import java.util.concurrent.TimeUnit;
 import java.net.DatagramPacket;
 import java.net.MulticastSocket;
 import java.net.SocketTimeoutException;
@@ -24,19 +23,25 @@ public class GetChunk extends Peer
     public void run()
     {
         if(!checkVersion(msgParams[1]))
+        {
+            System.out.println("Version mismatch in GETCHUNK message: " + msgParams[1]);
             return;
-
+        }
+            
         if(msgParams.length < 5)
         {
-            System.out.println("Invalid GETCHUNK message");
+            System.out.println("Invalid GETCHUNK message: " + joinMessageParams(msgParams));
             return;
         }
 
         String fileId = msgParams[3], chunckNo = msgParams[4], chunckKey = fileId + "-" + chunckNo;
 
         if(backedUpChuncks.get(chunckKey) == null)
+        {
+            //System.out.println("Peer doesn't have requested chunck in GETCHUNK message, ignoring...");
             return;
-
+        }
+            
         File chunck = new File("database/" + id + "/backup/" + fileId+ "/chk" + chunckNo);
 
         try(FileInputStream fis = new FileInputStream(chunck); BufferedInputStream bis = new BufferedInputStream(fis);)
@@ -70,16 +75,17 @@ public class GetChunk extends Peer
     
                     if(params.length == 0)
                     {
-                        System.out.println("Corrupt message @ GETCHUNCK handler");
+                        System.out.println("Corrupt message @ GETCHUNK handler, skipping");
                         continue;
                     }
     
                     for(int i = 0; i < params.length; i++)
                         params[i] = params[i].trim();
 
-                    if(params.length >= 5 && params[0].equals("CHUNCK") && params[3].equals(fileId) 
+                    if(params.length >= 5 && params[0].equals("CHUNK") && params[3].equals(fileId) 
                         && params[4].equals(chunckNo))
                     {
+                        //System.out.println("External CHUNK message detected in response to GETCHUNK, ignoring request...");
                         mdrListener.close();
                         return;
                     }       
@@ -94,15 +100,15 @@ public class GetChunk extends Peer
         }
         catch(Exception e)
         {
-            System.out.println("Couldn't read from chunck");
+            System.out.println("Couldn't read from chunk");
         }
 
     }
 
     public void sendChunk(String fileId, int chunckNo, byte[] chunk)
     {
-        String storedMsg = "CHUNK " + version + " " + id + " " + fileId + " " + chunckNo + " \r\n\r\n";
-        byte[] header = storedMsg.getBytes();
+        String chunckMsg = "CHUNK " + version + " " + id + " " + fileId + " " + chunckNo + " \r\n\r\n";
+        byte[] header = chunckMsg.getBytes();
         byte[] chunkMsg = new byte[header.length + chunk.length];
 
         System.arraycopy(header, 0, chunkMsg, 0, header.length);
@@ -116,7 +122,7 @@ public class GetChunk extends Peer
         }
         catch(IOException e)
         {
-            System.out.println("Couldn't send CHUNK message");
+            System.out.println("Couldn't send CHUNK message: " + chunckMsg);
         }
     }
 

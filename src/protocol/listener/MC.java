@@ -55,7 +55,7 @@ public class MC extends Peer
 
                 if(msgParams.length == 0)
                 {
-                    System.out.println("Corrupt message @ restore");
+                    System.out.println("Corrupt message @ MC");
                     continue;
                 }
 
@@ -85,14 +85,14 @@ public class MC extends Peer
                         break;
 
                     default:
-                        System.out.println("Couldn't identify message in restore: " + msgParams[0]);
+                        System.out.println("Couldn't identify message in MC: " + msgParams[0]);
                 }
 
 
             }
             catch(IOException e)
             {
-                System.out.println("Couldn't receive packet");
+                System.out.println("Couldn't receive packet in MC");
             }
 
         }

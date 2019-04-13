@@ -61,7 +61,6 @@ public class Peer extends Thread implements BackupService
                 return;
             }
 
-
             mcPort = 5001;
             mdbPort = 5002;
             mdrPort = 5003;
@@ -74,7 +73,7 @@ public class Peer extends Thread implements BackupService
         }
         else
         {
-            System.out.println("Wrong number of arguments");
+            System.out.println("Wrong number of arguments: " + args.length);
             System.out.println("Usage: Peer <ProtocolVersion> <ServerID> <AccessPoint> [<mcAddr> <mcPort> <mdbAddr> <mdbPort> <mdrAddr> <mdrPort>]");
             return;
         }
@@ -94,7 +93,7 @@ public class Peer extends Thread implements BackupService
             }
             catch(UnknownHostException e)
             {
-                System.out.println("Unknown Host");
+                System.out.println("Unknown Host(s): " + args[3] + ", " + args[5] + ", " + args[7]);
                 return;
             }
 
@@ -125,11 +124,11 @@ public class Peer extends Thread implements BackupService
             mdrListener.start();
             mcListener.start();
 
-            System.out.println("Started threads");
+            System.out.println("Started channel listeners");
         }
         catch(Exception e)
         {
-            System.out.println("Could't create threads");
+            System.out.println("Could't create channel listeners");
         }
     }
 
@@ -162,7 +161,7 @@ public class Peer extends Thread implements BackupService
                     break;
 
                 default:
-                    System.out.println("Invalid table to save to disk");
+                    System.out.println("Invalid table to save to disk: " + table);
                     return;
             }
 
@@ -287,12 +286,12 @@ public class Peer extends Thread implements BackupService
             }
             catch(ClassNotFoundException e)
             {
-                System.out.println("Object serialized doesn't correspond to expected class");
+                System.out.println("Object serialized doesn't correspond to expected class ConcurrentHashMap<String, int[]>");
             }
         }
         catch(FileNotFoundException e)
         {
-            System.out.println("Couldn't find previous stored chuncks database file, generating new one...");
+            System.out.println("Couldn't find previous stored chuncks database file in " + "database/" + id + "/backedChuncks.ser" + ", generating new one...");
 
             Peer.setBackupUpChuncksTable(new ConcurrentHashMap<String, int[]>());
             Peer.saveTableToDisk(1);
@@ -317,12 +316,12 @@ public class Peer extends Thread implements BackupService
             }
             catch(ClassNotFoundException e)
             {
-                System.out.println("Object serialized doesn't correspond to expected class");
+                System.out.println("Object serialized doesn't correspond to expected class ConcurrentHashMap<String, ArrayList<Integer>>");
             }
         }
         catch(FileNotFoundException e)
         {
-            System.out.println("Couldn't find previous chuncks storage database file, generating new one...");
+            System.out.println("Couldn't find previous chuncks storage database file in " + "database/" + id + "/chuncksStorage.ser" + ", generating new one...");
 
             Peer.setChuncksStorageTable(new ConcurrentHashMap<String, ArrayList<Integer>>());
             Peer.saveTableToDisk(2);
@@ -347,12 +346,12 @@ public class Peer extends Thread implements BackupService
             }
             catch(ClassNotFoundException e)
             {
-                System.out.println("Object serialized doesn't correspond to expected class");
+                System.out.println("Object serialized doesn't correspond to expected class ConcurrentHashMap<String, String[]>");
             }
         }
         catch(FileNotFoundException e)
         {
-            System.out.println("Couldn't find previous backup up records database file, generating new one...");
+            System.out.println("Couldn't find previous backup up records database file in " + "database/" + id + "/backupRecords.ser" + ", generating new one...");
 
             Peer.setBackupRecordsTable(new ConcurrentHashMap<String, String[]>());
             Peer.saveTableToDisk(3);
@@ -450,7 +449,7 @@ public class Peer extends Thread implements BackupService
 
             if(backUpDetails.length != 3)
             {
-                info += "Invalid back up record\n\n";
+                info += "Invalid back up record with only " + backUpDetails.length + " fields\n\n";
                 continue;
             }
 
@@ -500,6 +499,16 @@ public class Peer extends Thread implements BackupService
         info += "Occupied space: " + spaceOccupied / 1000 + "kB\n\n";
 
         return info;
+    }
+
+    public String joinMessageParams(String[] msgParams)
+    {
+        String message = "";
+
+        for(int i = 0; i < msgParams.length; i++)
+            message += msgParams[i];
+
+        return message;
     }
 
     public static void setVersion(String version)

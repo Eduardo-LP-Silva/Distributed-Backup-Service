@@ -50,8 +50,8 @@ public class Backup extends Peer
         String fileId = generateFileId(file);
         int fileSize = (int) file.length();
         int partCounter,  nChuncks = (int) Math.ceil((double) fileSize / 64000);
-        int responseWaitingTime = 1 * 1000;
-        int attemptNo = 1;
+        int responseWaitingTime;
+        int attemptNo;
 
         if(fileSize % 64000 == 0)
             nChuncks += 1;
@@ -66,6 +66,9 @@ public class Backup extends Peer
             for(partCounter = 0; partCounter < nChuncks; partCounter++)
             {
                 int aux = (int) file.length() - bytesRead, bufferSize;
+                
+                responseWaitingTime = 1 * 1000;
+                attemptNo = 1;
 
                 if (aux > 64000)
                     bufferSize = 64000; //Maximum chunck size
@@ -91,7 +94,7 @@ public class Backup extends Peer
                 }
 
                 if(attemptNo > 5)
-                    System.out.println("Max attempts to send PUTCHUNCK reached\nChunck not stored with required replication");
+                    System.out.println("Max attempts to send PUTCHUNK reached\nChunk not stored with required replication");
             }
         }
         catch(Exception e)
@@ -106,7 +109,7 @@ public class Backup extends Peer
 
         if(!chunck.exists())
         {
-            System.out.println("Couldn't find chunck to backup: " + path);
+            System.out.println("Couldn't find chunk to backup: " + path);
             return;
         }
 
@@ -117,7 +120,7 @@ public class Backup extends Peer
         }
 
         int responseWaitingTime;
-        int attemptNo = 1;
+        int attemptNo;
         int chunckSize = (int) chunck.length();
         String fileId = chunck.getParentFile().getName();
         int chunckNo = Integer.parseInt(chunck.getName().substring(3));
@@ -127,6 +130,7 @@ public class Backup extends Peer
             byte[] buffer = new byte[chunckSize];
             
             responseWaitingTime = 1 * 1000;
+            attemptNo = 1;
 
             if (!sendPutChunck(fileId, buffer, chunckNo, replication))
                 return;
@@ -143,12 +147,12 @@ public class Backup extends Peer
             }
 
             if (attemptNo > 5)
-                System.out.println("Max attempts to send PUTCHUNCK reached\nChunck not stored with required replication");
+                System.out.println("Max attempts to send PUTCHUNK reached\nChunk not stored with required replication");
             
         }
         catch(Exception e)
         {
-            System.out.println("Couldn't separate file into chuncks");
+            System.out.println("Couldn't separate file into chunks");
         }
     }
 
@@ -188,7 +192,7 @@ public class Backup extends Peer
 
                 if(msgParams.length == 0)
                 {
-                    System.out.println("Corrupt message @ peer.receivePut");
+                    System.out.println("Corrupt message @ Backup protocol initiator STORED message handler, skipping...");
                     continue;
                 }
 
@@ -199,7 +203,7 @@ public class Backup extends Peer
                 {
                     if(msgParams.length < 5)
                     {
-                        System.out.println("Invalid STORED message");
+                        System.out.println("Invalid STORED message: " + joinMessageParams(msgParams));
                         continue;
                     }
 
@@ -218,7 +222,7 @@ public class Backup extends Peer
             if(e instanceof SocketTimeoutException)
                 System.out.println("Didn't received required STORED answers to meet replication demands");
             else
-                System.out.println("Couldn't received PUT");
+                System.out.println("Couldn't received STORED");
 
             mcSocket.close();
             return false;
@@ -230,7 +234,7 @@ public class Backup extends Peer
 
     public boolean sendPutChunck(String fileId, byte[] chunck, int chuckNo, int replication)
     {
-        String msg = "PUTCHUNCK " + version + " " + id + " " + fileId + " " + chuckNo + " " + replication
+        String msg = "PUTCHUNK " + version + " " + id + " " + fileId + " " + chuckNo + " " + replication
             + " \r\n\r\n";
 
         byte[] header = msg.getBytes();
@@ -247,7 +251,7 @@ public class Backup extends Peer
         }
         catch(Exception e)
         {
-            System.out.println("Couldn't send putchunck");
+            System.out.println("Couldn't send putchunk");
         }
 
         return true;

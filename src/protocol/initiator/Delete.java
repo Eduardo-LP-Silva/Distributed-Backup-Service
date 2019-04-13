@@ -73,7 +73,8 @@ public class Delete extends Peer
         }
         catch(Exception e)
         {
-            System.out.println("Couldn't send DELETE");
+            System.out.println("Couldn't send DELETE message: " + msg);
+            return false;
         }
 
         return true;

@@ -9,12 +9,12 @@ import java.io.File;
 import java.io.FileOutputStream;
 import app.Peer;
 
-public class PutChunck extends Peer
+public class PutChunckEnh extends Peer
 {
     private String[] msgParams;
     byte[] bytes;
 
-    public PutChunck(String[] msgParams, byte[] bytes)
+    public PutChunckEnh(String[] msgParams, byte[] bytes)
     {
         this.msgParams = msgParams;
         this.bytes = bytes;
@@ -24,39 +24,30 @@ public class PutChunck extends Peer
     public void run()
     {
         if(!checkVersion(msgParams[1]))
-        {
-            System.out.println("Version mismatch in PUTCHUNK message: " + msgParams[1]);
             return;
-        }
-            
+
         if(msgParams.length < 6)
         {
-            System.out.println("Invalid PUTCHUNK message: " + joinMessageParams(msgParams));
+            System.out.println("Invalid PUTCHUNCK message");
             return;
         }
 
         if(msgParams[2].equals("" + id)) //Peer that initiated backup cannot store chuncks
-        {
-            //System.out.println("PUTCHUNK message received originated from same peer, ignoring...");
             return;
-        }
-            
+
         int bodyIndex = getMessageBodyIndex(bytes);
 
         if(bodyIndex == -1)
         {
-            System.out.println("Couldn't find double CRLF sequence in PUTCHUNK message");
+            System.out.println("Couldn't find CRLF sequence in PUTCHUNCK message");
             return;
         }
 
         int chunckSize = bytes.length - bodyIndex;
 
         if (getFolderSize(new File("database/" + id + "/backup")) + chunckSize > diskSpace)
-        {
-            System.out.println("Disk space is too low to store chunck in PUTCHUNK message, ignoring...");
             return;
-        }
-            
+
         String fileId = msgParams[3], chunckNo = msgParams[4], replication = msgParams[5],
             path = "database/" + id + "/backup/" + fileId;
 
@@ -100,7 +91,7 @@ public class PutChunck extends Peer
         }
         catch(IOException e)
         {
-            System.out.println("Couldn't write chunk into file");
+            System.out.println("Couldn't write chunck into file");
             return;
         }
     }
@@ -128,7 +119,7 @@ public class PutChunck extends Peer
         }
         catch(IOException e)
         {
-            System.out.println("Couldn't send STORED message: " + storedMsg);
+            System.out.println("Couldn't send STORED message");
         }
     }
 

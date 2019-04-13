@@ -13,7 +13,8 @@ public class TestClient
     {
         if(args.length < 2)
         {
-            System.out.println("Wrong number of arguments\n Usage: TestClient <peer_ap> <operation> <opnd_1> [<opnd_2>]");
+            System.out.println("Wrong number of arguments: " + args.length); 
+            System.out.println("Usage: TestClient <peer_ap> <operation> <opnd_1> [<opnd_2>]");
             return;
         }
 
@@ -31,7 +32,7 @@ public class TestClient
 
                 if (args.length < 4)
                 {
-                    System.out.println("Wrong number of arguments\n");
+                    System.out.println("Wrong number of arguments: " + args.length);
                     System.out.println("Usage: TestClient <peer_ap> <operation> <opnd_1> <opnd_2>");
                     return;
                 }
@@ -42,7 +43,7 @@ public class TestClient
                 }
                 catch(RemoteException e)
                 {
-                    System.out.println("Couldn't back up service");
+                    System.out.println("Couldn't back up file " + args[2] + "with replication " + args[3]);
                 }
 
                 break;
@@ -55,7 +56,7 @@ public class TestClient
 
                 if (args.length < 3)
                 {
-                    System.out.println("Wrong number of arguments\n");
+                    System.out.println("Wrong number of arguments: " + args.length);
                     System.out.println("Usage: TestClient <peer_ap> <operation> <opnd_1> <opnd_2>");
                     return;
                 }
@@ -66,7 +67,7 @@ public class TestClient
                 }
                 catch(RemoteException e)
                 {
-                    System.out.println("Couldn't restore service");
+                    System.out.println("Couldn't restore file " + args[2]);
                 }
                 break;
 
@@ -78,7 +79,7 @@ public class TestClient
 
                 if (args.length < 3)
                 {
-                    System.out.println("Wrong number of arguments\n");
+                    System.out.println("Wrong number of arguments: " + args.length);
                     System.out.println("Usage: TestClient <peer_ap> <operation> <opnd_1> <opnd_2>");
                     return;
                 }
@@ -89,19 +90,15 @@ public class TestClient
                 }
                 catch(RemoteException e)
                 {
-                    System.out.println("Couldn't restore service");
+                    System.out.println("Couldn't delete file " + args[2]);
                 }
-                break;
-
-            case "RECLAIMENH":
-                System.out.println("Reclaim enhancement not implemented");
                 break;
 
             case "RECLAIM":
 
                 if (args.length < 3)
                 {
-                    System.out.println("Wrong number of arguments\n");
+                    System.out.println("Wrong number of arguments: " + args.length);
                     System.out.println("Usage: TestClient <peer_ap> <operation> <opnd_1> <opnd_2>");
                     return;
                 }
@@ -128,8 +125,11 @@ public class TestClient
         }
         catch(Exception e)
         {
-            System.out.println("Couldn't connect to server");
+            System.out.println("Couldn't connect to server with remote object " + remoteObject);
+            return false;
         }
+
+        return true;
     }
 
     public static void restoreFile(String path)

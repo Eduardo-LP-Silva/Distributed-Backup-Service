@@ -118,7 +118,8 @@ public class Restore extends Peer
   
                 if(msgParams.length == 0)
                 {
-                    System.out.println("Corrupt message @ peer.receiveChunk");
+                    System.out.println("Corrupt message @ restore protocol initiator CHUNCK message handler, skipping...");
+                    continue;
                 }
   
                 for(int i = 0; i < msgParams.length; i++)
@@ -128,7 +129,8 @@ public class Restore extends Peer
                 {
                   if (msgParams.length < 6) 
                   {
-                      System.out.println("Invalid CHUNK message");
+                      System.out.println("Invalid CHUNK message: " + joinMessageParams(msgParams));
+                      continue;
                   } 
                   else 
                   {
@@ -152,9 +154,9 @@ public class Restore extends Peer
         catch(Exception e)
         {
             if(e instanceof SocketTimeoutException)
-                System.out.println("Didn't received required CHUNK");
+                System.out.println("Didn't received required CHUNK message");
             else
-                System.out.println("Couldn't received CHUNK");
+                System.out.println("Couldn't received CHUNK message");
 
             mdrSocket.close();
             return false;

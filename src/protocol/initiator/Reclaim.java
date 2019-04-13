@@ -23,8 +23,11 @@ public class Reclaim extends Peer
         ArrayList<Integer> replications;
 
         if((spaceOccupied = (int) getFolderSize(backupFolder)) <= diskSpace)
+        {
+            System.out.println("Current occupied space is already lower than new limit, no need to evict chunks");
             return;
-        
+        }
+            
         if(diskSpace != 0)
             for(String localChunck: keys)
             {
@@ -72,7 +75,7 @@ public class Reclaim extends Peer
 
         if(chunckParams.length != 2)
         {
-            System.out.println("Invalid local chunck format stored in local chuncks table");
+            System.out.println("Invalid local chunck format stored in local chuncks table with only " + chunckParams.length + " fields");
             return;
         }
 
@@ -97,10 +100,7 @@ public class Reclaim extends Peer
         }
         catch(IOException E)
         {
-            System.out.println("Couldn't send REMOVED message");
+            System.out.println("Couldn't send REMOVED message: " + msg);
         }
-        
     }
-
-
 }

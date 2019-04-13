@@ -18,12 +18,12 @@ public class Chunk extends Peer
     {
         if(msgParams.length < 6)
         {
-            System.out.println("Invalid CHUNK message");
+            System.out.println("Invalid CHUNK message: " + joinMessageParams(msgParams));
             return;
         }
 
         if(!checkVersion(msgParams[1]))
-            return;        
+            System.out.println("Version mismatch in CHUNK message: " + msgParams[1]);       
     }
 
 }

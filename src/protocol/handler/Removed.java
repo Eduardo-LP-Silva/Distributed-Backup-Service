@@ -23,11 +23,14 @@ public class Removed extends Peer
     public void run()
     {
         if(!checkVersion(msgParams[1]))
+        {
+            System.out.println("Version mismatch in REMOVED message: " + msgParams[1]);
             return;
+        }
 
         if(msgParams.length != 5)
         {
-            System.out.println("Invalid REMOVED message");
+            System.out.println("Invalid REMOVED message: " + joinMessageParams(msgParams));
             return;
         }
 
@@ -35,8 +38,11 @@ public class Removed extends Peer
         localChunckKey = fileId + "-" + chunckNo;
 
         if(Integer.parseInt(senderId) == id)
+        {
+            System.out.println("REMOVED message received originated from same peer, ignoring...");
             return;
-
+        }
+            
         ArrayList<Integer> chunckExternalCount = chuncksStorage.get(localChunckKey);
         int[] localChunckParams = backedUpChuncks.get(localChunckKey);
         int replication;
@@ -63,7 +69,7 @@ public class Removed extends Peer
                 }
                 catch(IOException e)
                 {
-                    System.out.println("Couldn't listen on MDB channel for PUTCHUNCK messages after REMOVED");
+                    System.out.println("Couldn't listen on MDB channel for PUTCHUNK messages after REMOVED");
                     return;
                 }
 
@@ -86,16 +92,17 @@ public class Removed extends Peer
     
                         if(msgParams.length == 0)
                         {
-                            System.out.println("Corrupt message @ removed");
+                            System.out.println("Corrupt message @ REMOVED handler, skipping...");
                             continue;
                         }
 
                         for(int i = 0; i < msgParams.length; i++)
                             msgParams[i] = msgParams[i].trim();
             
-                        if(msgParams[0].equals("PUTCHUNCK") && msgParams.length >= 7 && msgParams[3].equals(fileId)
+                        if(msgParams[0].equals("PUTCHUNK") && msgParams.length >= 7 && msgParams[3].equals(fileId)
                             && msgParams[4].equals(chunckNo))
                         {
+                            System.out.println("PUTCHUNK message received in response to REMOVED, not sending new PUTCHUNK...");
                             mdbSocket.close();
                             return;
                         }

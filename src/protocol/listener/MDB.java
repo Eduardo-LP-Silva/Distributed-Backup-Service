@@ -52,7 +52,7 @@ public class MDB extends Peer
 
                 if(msgParams.length == 0)
                 {
-                    System.out.println("Corrupt message @ backup");
+                    System.out.println("Corrupt message @ MDB");
                     continue;
                 }
 
@@ -61,20 +61,20 @@ public class MDB extends Peer
 
                 switch(msgParams[0])
                 {
-                    case "PUTCHUNCK":
+                    case "PUTCHUNK":
                         PutChunck pc = new PutChunck(msgParams, actualData);
                         pc.start();
                         break;
 
                     default:
-                        System.out.println("Couldn't identify message in backup: " + msgParams[0]);
+                        System.out.println("Couldn't identify message in MDB: " + msgParams[0]);
                 }
 
 
             }
             catch(IOException e)
             {
-                System.out.println("Couldn't receive packet");
+                System.out.println("Couldn't receive packet in MDB");
             }
 
         }
