@@ -25,4 +25,10 @@ them without any arguments.
 
 Note: The script files also must be executed from the src folder to work.
 
+Note 2: Regarding the enhancements made, since there is no way (without trading extra messages)
+for a peer to know which command was given to another at the start of a subprotocol (e.g BACKUP vs
+BACKUPENH), the distinction between enhanced protocols and vanilla ones is made purely through
+the peer's version. Currently, if the peer's version is 1.0, it will run the vanilla protocols,
+else, if the version is 2.0, it will run the enhancements where available.
+
  

@@ -70,10 +70,11 @@ public class MDB extends Peer
                             pc.start();
                         }
                         else
-                        {
-                            PutChunckEnh pce = new PutChunckEnh(msgParams, actualData);
-                            pce.start();
-                        }
+                            if(Peer.version.equals("2.0"))
+                            {
+                                PutChunckEnh pce = new PutChunckEnh(msgParams, actualData);
+                                pce.start();
+                            }
                         
                         break;
 
