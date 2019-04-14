@@ -33,6 +33,7 @@ import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.Date;
+import java.net.DatagramPacket;
 
 public class Peer extends Thread implements BackupService
 {
@@ -551,6 +552,58 @@ public class Peer extends Thread implements BackupService
         info += "Occupied space: " + spaceOccupied / 1000 + "kB\n\n";
 
         return info;
+    }
+
+    public void sendRemoved(String localChunckKey)
+    {
+        String[] chunckParams = localChunckKey.split("-");
+
+        if(chunckParams.length != 2)
+        {
+            System.out.println("Invalid local chunck format stored in local chuncks table with only " + chunckParams.length + " fields");
+            return;
+        }
+
+        String fileId = chunckParams[0], chunckNo = chunckParams[1];
+        String msg = "REMOVED " + version + " " + id + " " + fileId  + " " + chunckNo + " \r\n\r\n";
+        byte[] msgData = msg.getBytes(); 
+        File localChunck = new File("database/" + id + "/backup/" + fileId + "/chk" + chunckNo);
+
+        localChunck.delete();
+        backedUpChuncks.remove(localChunckKey);
+
+        ArrayList<Integer> chunckExternalStorage = chuncksStorage.get(localChunckKey);
+        
+        chunckExternalStorage.remove((Object) id);
+
+        if(chunckExternalStorage.size() == 0)
+            chuncksStorage.remove(localChunckKey);
+        else
+            chuncksStorage.put(localChunckKey, chunckExternalStorage);
+
+        changedChunksStorage.set(true);
+        //saveTableToDisk(2);
+
+        DatagramPacket packet = new DatagramPacket(msgData, msgData.length, mcAddr, mcPort);
+
+        try
+        {
+            controlSocket.send(packet);
+        }
+        catch(IOException E)
+        {
+            System.out.println("Couldn't send REMOVED message: " + msg);
+        }
+    }
+
+    public void cleanEmptyFolders()
+    {
+        String databasePath = "database/" + id + "/backup";
+        File backupFolder = new File(databasePath);
+
+        for(File file: backupFolder.listFiles())
+            if(file.listFiles().length == 0)
+                file.delete();
     }
 
     public String joinMessageParams(String[] msgParams)

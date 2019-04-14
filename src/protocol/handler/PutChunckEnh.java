@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.io.File;
 import java.io.FileOutputStream;
 import app.Peer;
+import java.util.Set;
 
 public class PutChunckEnh extends Peer
 {
@@ -52,8 +53,13 @@ public class PutChunckEnh extends Peer
 
         if (getFolderSize(new File("database/" + id + "/backup")) + chunckSize > diskSpace.get())
         {
-            System.out.println("Disk space is too low to store chunck in PUTCHUNK message, ignoring...");
-            return;
+            if(!freeUpSpace(chunckSize))
+            {
+                System.out.println("Disk space is too low to store chunck in PUTCHUNK message, ignoring...");
+                return;
+            }
+            else
+                cleanEmptyFolders();
         }
             
         String fileId = msgParams[3], chunckNo = msgParams[4], replication = msgParams[5],
@@ -111,6 +117,53 @@ public class PutChunckEnh extends Peer
             System.out.println("Couldn't write chunk into file");
             return;
         }
+    }
+
+    public boolean freeUpSpace(int chunkSize)
+    {
+        Set<String> localChunks = backedUpChuncks.keySet();
+        int[] backedChunkDetails;
+        ArrayList<Integer> chunkExternalStorage;
+        File chunkToRemove;
+        String[] chunkParams;
+
+        for(String localChunkKey: localChunks)
+        {
+            backedChunkDetails = backedUpChuncks.get(localChunkKey);
+
+            if(backedChunkDetails.length == 2)
+            {
+                chunkExternalStorage = chuncksStorage.get(localChunkKey);
+
+                if(chunkExternalStorage != null)
+                {
+                    chunkParams = localChunkKey.split("-");
+
+                    if(chunkParams.length != 2)
+                    {
+                        System.out.println("Invalid key in backed up chunks table, ignoring...");
+                        continue;
+                    }
+                        
+                    chunkToRemove = new File("database/" + id + "/backup/" + chunkParams[0] + "/chk" + chunkParams[1]);
+                    
+                    if(chunkToRemove.delete())
+                    {
+                        sendRemoved(localChunkKey);
+
+                        System.out.println("Dropped chunk to free up space");
+
+                        if(getFolderSize(new File("database/" + id + "/backup")) + chunkSize <= diskSpace.get())
+                            return true;
+                    }
+                    else
+                        System.out.println("Couldn't delete over replicated chunk to make space for new chunk");    
+                }
+
+            }
+        }
+
+        return false;
     }
 
     public boolean checkForStored(String fileId, String chunckNo, int replication)
