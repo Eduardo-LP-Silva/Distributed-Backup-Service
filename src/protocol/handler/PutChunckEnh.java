@@ -117,57 +117,24 @@ public class PutChunckEnh extends Peer
 
     public boolean checkForStored(String fileId, String chunckNo, int replication)
     {
-        int counter = 0;
+        String chunkKey = fileId + "-" + chunckNo;
         Random rand = new Random();
-        MulticastSocket mdbListener = null;
         
-        try 
+        try
         {
-            mdbListener = new MulticastSocket(mcPort);
-
-            mdbListener.joinGroup(mcAddr);
-            mdbListener.setTimeToLive(1);
-            mdbListener.setSoTimeout(rand.nextInt(400));
-
-            while (true) 
-            {
-                byte[] buf = new byte[64100];
-                DatagramPacket packet = new DatagramPacket(buf, buf.length);
-
-                mdbListener.receive(packet);
-
-                byte[] actualData = new byte[packet.getLength()];
-
-                System.arraycopy(packet.getData(), 0, actualData, 0, actualData.length);
-
-                String msg = new String(actualData).trim();
-                String[] params = msg.split("\\s+");
-
-                if (params.length == 0) 
-                {
-                    System.out.println("Corrupt message @ PUTCHUNCk protocol handler STORED message receiver, skipping...");
-                    continue;
-                }
-
-                for (int i = 0; i < params.length; i++)
-                    params[i] = params[i].trim();
-
-                if(params.length == 5 && params[0].equals("STORED") && checkVersion(params[1]) && params[3].equals(fileId)
-                        && params[4].equals(chunckNo)) 
-                    counter++;
-            }
-        } 
-        catch (SocketTimeoutException e) 
-        {
-            mdbListener.close();
-
-            return counter >= replication;
+            sleep(rand.nextInt(400));
         }
-        catch(IOException e)
+        catch(InterruptedException e)
         {
-            System.out.println("Couldn't listen for STORED messages in PUTCHUNCK handler");
+            System.out.println("Couldn't wait for stored messages in PUTCHUNK handler enhanced");
+        }
+        
+        ArrayList<Integer> chunkExternalStorage = chuncksStorage.get(chunkKey);
+
+        if(chunkExternalStorage != null)
+            return chunkExternalStorage.size() >= replication;
+        else
             return false;
-        }
     }
 
     public void sendStored(String fileId, String chunckNo)

@@ -8,7 +8,10 @@ Compilation:
 - javac protocol/initiator/*.java
 - javac protocol/listener/*.java
 
-Or just use the make.sh! 
+In addition to this, you must also have an instace of an RMI registry running in the src folder.
+You can do this with the command rmiregistry &
+
+Or just use make.sh for all of the above! 
 
 Note: if for some reason there are .class files already present and there are compiler/runner
 conflicts with these versions, use cleanup.sh (or delete the .class files) and only then compile
