@@ -2,8 +2,6 @@ package protocol.handler;
 
 import java.util.Random;
 import java.net.DatagramPacket;
-import java.net.MulticastSocket;
-import java.net.SocketTimeoutException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.io.File;

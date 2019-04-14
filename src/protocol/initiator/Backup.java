@@ -56,7 +56,7 @@ public class Backup extends Peer
         if(fileSize % 64000 == 0)
             nChuncks += 1;
 
-        backUpRecordsTable.put(path, new String[] {fileId, "" + replication, "" + nChuncks});
+        backUpRecordsTable.put(fileId, new String[] {path, "" + replication, "" + nChuncks});
         changedRecordsTable.set(true);
         //saveTableToDisk(3);
 

@@ -47,7 +47,7 @@ public class Peer extends Thread implements BackupService
     protected static String version;
     protected static ConcurrentHashMap<String, int[]> backedUpChuncks; //fileID-ChunckNo -> {replication_expected, size}
     protected static ConcurrentHashMap<String, ArrayList<Integer>> chuncksStorage; //fileID-ChunckNo -> {1, 2, ...}
-    protected static ConcurrentHashMap<String, String[]> backUpRecordsTable; //filePath -> {fileIdD, expected_replication, n_chuncks}
+    protected static ConcurrentHashMap<String, String[]> backUpRecordsTable; //fileID -> {filePath, expected_replication, n_chuncks}
     protected static AtomicBoolean changedBackedUpChunks;
     protected static AtomicBoolean changedChunksStorage;
     protected static AtomicBoolean changedRecordsTable;
@@ -492,11 +492,9 @@ public class Peer extends Thread implements BackupService
         String externalStorageKey;
         ArrayList<Integer> externalStorage;
 
-        for(String filePath: keys)
+        for(String fileId: keys)
         {
-            info += "File: " + filePath + "\n\n";
-
-            backUpDetails = backUpRecordsTable.get(filePath);
+            backUpDetails = backUpRecordsTable.get(fileId);
 
             if(backUpDetails.length != 3)
             {
@@ -504,13 +502,14 @@ public class Peer extends Thread implements BackupService
                 continue;
             }
 
-            info += "File ID: " + backUpDetails[0] + "\n\n";
+            info += "File: " + backUpDetails[0] + "\n\n";
+            info += "File ID: " + fileId + "\n\n";
             info += "Desired Replication: " + backUpDetails[1] + "\n\n";
             info += "Number of Chuncks: " + backUpDetails[2] + "\n\n";
 
             for(int i = 0; i < Integer.parseInt(backUpDetails[2]); i++)
             {
-                externalStorageKey = backUpDetails[0] + "-" + i;
+                externalStorageKey = fileId+ "-" + i;
                 externalStorage = chuncksStorage.get(externalStorageKey);
 
                 if(externalStorage != null)
