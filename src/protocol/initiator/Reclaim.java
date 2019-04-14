@@ -11,7 +11,7 @@ public class Reclaim extends Peer
 {
     public Reclaim(int maxSpace)
     {
-        Peer.diskSpace = maxSpace;
+        Peer.diskSpace.set(maxSpace);
     }
 
     @Override
@@ -22,13 +22,13 @@ public class Reclaim extends Peer
         int spaceReleased = 0, spaceOccupied;
         ArrayList<Integer> replications;
 
-        if((spaceOccupied = (int) getFolderSize(backupFolder)) <= diskSpace)
+        if((spaceOccupied = (int) getFolderSize(backupFolder)) <= diskSpace.get())
         {
             System.out.println("Current occupied space is already lower than new limit, no need to evict chunks");
             return;
         }
             
-        if(diskSpace != 0)
+        if(diskSpace.get() != 0)
             for(String localChunck: keys)
             {
                 if((replications = chuncksStorage.get(localChunck)) != null)
@@ -37,7 +37,7 @@ public class Reclaim extends Peer
                         spaceReleased += backedUpChuncks.get(localChunck)[1];
                         sendRemoved(localChunck);
                     
-                        if(spaceOccupied - spaceReleased <= diskSpace)
+                        if(spaceOccupied - spaceReleased <= diskSpace.get())
                         {
                             cleanEmptyFolders();
                             return;
@@ -51,7 +51,7 @@ public class Reclaim extends Peer
             spaceReleased += backedUpChuncks.get(localChunck)[1];
             sendRemoved(localChunck);
 
-            if(spaceOccupied - spaceReleased <= diskSpace)
+            if(spaceOccupied - spaceReleased <= diskSpace.get())
             {
                 cleanEmptyFolders();
                 return;
@@ -96,7 +96,8 @@ public class Reclaim extends Peer
         else
             chuncksStorage.put(localChunckKey, chunckExternalStorage);
 
-        saveTableToDisk(2);
+        changedChunksStorage.set(true);
+        //saveTableToDisk(2);
 
         DatagramPacket packet = new DatagramPacket(msgData, msgData.length, mcAddr, mcPort);
 

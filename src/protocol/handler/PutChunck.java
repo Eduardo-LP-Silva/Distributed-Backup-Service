@@ -51,7 +51,7 @@ public class PutChunck extends Peer
 
         int chunckSize = bytes.length - bodyIndex;
 
-        if (getFolderSize(new File("database/" + id + "/backup")) + chunckSize > diskSpace)
+        if (getFolderSize(new File("database/" + id + "/backup")) + chunckSize > diskSpace.get())
         {
             System.out.println("Disk space is too low to store chunck in PUTCHUNK message, ignoring...");
             return;
@@ -91,8 +91,11 @@ public class PutChunck extends Peer
                 chuncksStorage.put(fileId + "-" + chunckNo, chunckLocation);
 
                 sendStored(fileId, chunckNo);
-                saveTableToDisk(1);
-                saveTableToDisk(2);
+
+                changedBackedUpChunks.set(true);
+                changedChunksStorage.set(true);
+                //saveTableToDisk(1);
+                //saveTableToDisk(2);
             }
             else
                 if(backedUpChuncks.get(fileId + "-" + chunckNo) != null)

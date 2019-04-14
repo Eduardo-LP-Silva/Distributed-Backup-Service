@@ -57,7 +57,8 @@ public class Backup extends Peer
             nChuncks += 1;
 
         backUpRecordsTable.put(path, new String[] {fileId, "" + replication, "" + nChuncks});
-        saveTableToDisk(3);
+        changedRecordsTable.set(true);
+        //saveTableToDisk(3);
 
         try(FileInputStream fis = new FileInputStream(file); BufferedInputStream bis = new BufferedInputStream(fis);)
         {

@@ -56,7 +56,8 @@ public class Removed extends Peer
             else
                 chuncksStorage.put(localChunckKey, chunckExternalCount);
 
-            saveTableToDisk(2);
+            changedChunksStorage.set(true);
+            //saveTableToDisk(2);
         }
 
         if(localChunckParams != null)

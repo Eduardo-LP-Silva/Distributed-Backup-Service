@@ -27,7 +27,12 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.Date;
 
 public class Peer extends Thread implements BackupService
 {
@@ -37,16 +42,21 @@ public class Peer extends Thread implements BackupService
     protected static int mcPort, mdbPort, mdrPort;
     protected static InetAddress mcAddr, mdbAddr, mdrAddr;
     protected static int id;
-    protected static int diskSpace = Integer.MAX_VALUE;
+    protected static AtomicInteger diskSpace;
     protected static String accessPoint;
     protected static String version;
     protected static ConcurrentHashMap<String, int[]> backedUpChuncks; //fileID-ChunckNo -> {replication_expected, size}
     protected static ConcurrentHashMap<String, ArrayList<Integer>> chuncksStorage; //fileID-ChunckNo -> {1, 2, ...}
     protected static ConcurrentHashMap<String, String[]> backUpRecordsTable; //filePath -> {fileIdD, expected_replication, n_chuncks}
-
+    protected static AtomicBoolean changedBackedUpChunks;
+    protected static AtomicBoolean changedChunksStorage;
+    protected static AtomicBoolean changedRecordsTable;
     public static void main(String args[])
     {
         System.setProperty("java.net.preferIPv4Stack", "true");
+
+        diskSpace = new AtomicInteger(Integer.MAX_VALUE);
+
         if(args.length >= 3)
         {
             try
@@ -98,8 +108,9 @@ public class Peer extends Thread implements BackupService
             }
 
         }
-
+        
         generateDataBase();
+        savePeriodically();
         setUpClientInterface();
 
         try
@@ -130,6 +141,39 @@ public class Peer extends Thread implements BackupService
         {
             System.out.println("Could't create channel listeners");
         }
+    }
+
+    public static void savePeriodically()
+    {
+        Timer timer = new Timer();
+
+        timer.scheduleAtFixedRate(new TimerTask()
+        {
+            @Override
+            public void run()
+            {
+                if(changedBackedUpChunks.get())
+                {
+                    System.out.println("Saved backed up chunks table");
+                    saveTableToDisk(1);
+                    changedBackedUpChunks.set(false);
+                }
+
+                if(changedChunksStorage.get())
+                {
+                    System.out.println("Saved chunks storage table");
+                    saveTableToDisk(2);
+                    changedChunksStorage.set(false);
+                }
+
+                if(changedRecordsTable.get())
+                {
+                    System.out.println("Saved back up records table");
+                    saveTableToDisk(3);
+                    changedRecordsTable.set(false);
+                }
+            }
+        }, new Date(), 30 * 1000);
     }
 
     public static void saveTableToDisk(int table)
@@ -266,6 +310,10 @@ public class Peer extends Thread implements BackupService
     public static void generateDataBase()
     {
         FileInputStream fis;
+
+        changedBackedUpChunks = new AtomicBoolean();
+        changedChunksStorage = new AtomicBoolean();
+        changedRecordsTable = new AtomicBoolean();
 
         try
         {
@@ -500,7 +548,7 @@ public class Peer extends Thread implements BackupService
 
         int spaceOccupied = getFolderSize(new File("database/" + id + "/backup"));
 
-        info += "Storage Capacity: " + diskSpace / 1000 + "kB\n\n";
+        info += "Storage Capacity: " + diskSpace.get() / 1000 + "kB\n\n";
         info += "Occupied space: " + spaceOccupied / 1000 + "kB\n\n";
 
         return info;

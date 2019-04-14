@@ -55,7 +55,8 @@ public class Delete extends Peer
                 break;
         }
         
-        saveTableToDisk(2);
+        changedChunksStorage.set(true);
+        //saveTableToDisk(2);
         file.delete();
     }
 

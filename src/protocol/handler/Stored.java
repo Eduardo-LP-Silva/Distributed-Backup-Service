@@ -42,7 +42,8 @@ public class Stored extends Peer
             {
                 chunckLocation.add(senderId);
                 chuncksStorage.put(key, chunckLocation);
-                saveTableToDisk(2);
+                changedChunksStorage.set(true);
+                //saveTableToDisk(2);
             }
         }
         else
@@ -50,7 +51,8 @@ public class Stored extends Peer
             chunckLocation = new ArrayList<Integer>();
             chunckLocation.add(senderId);
             chuncksStorage.put(key, chunckLocation);
-            saveTableToDisk(2);
+            changedChunksStorage.set(true);
+            //saveTableToDisk(2);
         }
     }
 }
