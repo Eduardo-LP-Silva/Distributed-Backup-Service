@@ -15,7 +15,7 @@ public class TestClient
         if(args.length < 2)
         {
             System.out.println("Wrong number of arguments: " + args.length); 
-            System.out.println("Usage: TestClient <peer_ap> <operation> <opnd_1> [<opnd_2>]");
+            System.out.println("Usage: TestClient <peer_ap> <operation> [<opnd_1> <opnd_2>]");
             return;
         }
 

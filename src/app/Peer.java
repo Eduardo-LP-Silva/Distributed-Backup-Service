@@ -52,6 +52,7 @@ public class Peer extends Thread implements BackupService
     protected static AtomicBoolean changedBackedUpChunks;
     protected static AtomicBoolean changedChunksStorage;
     protected static AtomicBoolean changedRecordsTable;
+    
     public static void main(String args[])
     {
         System.setProperty("java.net.preferIPv4Stack", "true");
