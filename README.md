@@ -1,5 +1,5 @@
 # Distributed-Backup-Service
-A distributed application for managing file backups using UDP developed in the Distributed Systems (SDIS) class.
+A distributed application for managing file backups using UDP as the transport protocol.
 
 ## Overview
 The system is composed of various machines or peers. Each one can execute 5 different protocols (concurrency is supported): 
